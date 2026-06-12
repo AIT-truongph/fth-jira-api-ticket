@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Jira API cho AI — Demo &amp; Tài liệu sống</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f4f5f7; color: #172b4d; }
+  header { background: #0052cc; color: #fff; padding: 10px 24px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  header h1 { font-size: 17px; margin-right: 8px; }
+  .tab-btn { padding: 7px 16px; border: none; border-radius: 4px; background: rgba(255,255,255,.2); color: #fff; cursor: pointer; font-size: 14px; }
+  .tab-btn.active { background: #fff; color: #0052cc; font-weight: 700; }
+  header input { padding: 6px 10px; border: none; border-radius: 4px; width: 130px; }
+  header button.go { padding: 6px 14px; border: none; border-radius: 4px; background: #ffab00; color: #172b4d; font-weight: 600; cursor: pointer; }
+  main { padding: 16px 24px; }
+  .card { background: #fff; border-radius: 6px; box-shadow: 0 1px 2px rgba(9,30,66,.25); padding: 14px 16px; margin-bottom: 10px; }
+  h2 { font-size: 15px; margin-bottom: 8px; }
+  h3 { font-size: 13px; color: #6b778c; text-transform: uppercase; margin: 16px 0 6px; }
+  .pill { display: inline-block; background: #dfe1e6; border-radius: 10px; padding: 1px 10px; font-size: 12px; margin: 2px 3px 2px 0; }
+  .pill.green { background: #e3fcef; color: #006644; }
+  .pill.blue  { background: #deebff; color: #0747a6; }
+  .pill.red   { background: #ffebe6; color: #bf2600; }
+  .muted { color: #6b778c; font-size: 13px; }
+  /* tab demo */
+  #tab-demo { display: flex; gap: 16px; height: calc(100vh - 90px); }
+  #feed { width: 350px; flex-shrink: 0; overflow-y: auto; }
+  #detail { flex: 1; overflow-y: auto; }
+  .event { cursor: pointer; border-left: 4px solid #0052cc; }
+  .event:hover { background: #e9f2ff; }
+  .event .ev-type { font-size: 11px; font-weight: 700; color: #0052cc; text-transform: uppercase; }
+  .event .ev-key { font-weight: 700; margin-right: 6px; }
+  .event .ev-time { color: #6b778c; font-size: 11px; float: right; }
+  .event .ev-sum { font-size: 13px; color: #42526e; margin-top: 2px; }
+  .desc { white-space: pre-wrap; font-size: 13px; background: #fafbfc; border: 1px solid #dfe1e6; border-radius: 4px; padding: 10px; margin-top: 6px; }
+  .comment { border-left: 3px solid #dfe1e6; padding: 4px 10px; margin: 6px 0; font-size: 13px; }
+  .comment .who { font-weight: 600; font-size: 12px; color: #6b778c; }
+  .sim { border-left: 4px solid #36b37e; }
+  #loading { display: none; padding: 30px; text-align: center; color: #6b778c; }
+  .spinner { display: inline-block; width: 22px; height: 22px; border: 3px solid #dfe1e6; border-top-color: #0052cc; border-radius: 50%; animation: spin .8s linear infinite; vertical-align: middle; margin-right: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* trace */
+  table.trace { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.trace td, table.trace th { padding: 4px 8px; border-bottom: 1px solid #f4f5f7; text-align: left; vertical-align: top; }
+  table.trace code { background: #fafbfc; padding: 1px 4px; border-radius: 3px; font-size: 11px; }
+  /* tab catalog */
+  #tab-catalog { display: none; max-width: 1100px; }
+  .api { border-left: 4px solid #6554c0; }
+  .method { display: inline-block; min-width: 46px; text-align: center; font-weight: 700; font-size: 11px; border-radius: 3px; padding: 2px 6px; margin-right: 8px; color: #fff; }
+  .m-GET { background: #36b37e; } .m-POST { background: #0052cc; } .m-PUT { background: #ff8b00; } .m-DELETE { background: #de350b; }
+  .api code.path { font-size: 12px; word-break: break-all; }
+  .api .ai-val { margin: 8px 0 4px; font-size: 13px; }
+  .api .ai-val b { color: #006644; }
+  .api .how { font-size: 12px; color: #6b778c; }
+  .try-btn { margin-top: 8px; padding: 4px 12px; border: 1px solid #0052cc; background: #fff; color: #0052cc; border-radius: 4px; cursor: pointer; font-size: 12px; }
+  .try-btn:hover { background: #deebff; }
+  pre.resp { background: #172b4d; color: #b3d4ff; font-size: 11px; padding: 10px; border-radius: 4px; margin-top: 8px; max-height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
+  .grp-title { font-size: 16px; margin: 22px 0 10px; color: #0052cc; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Jira API cho AI</h1>
+  <button class="tab-btn active" id="btn-demo" onclick="showTab('demo')">Demo trực tiếp</button>
+  <button class="tab-btn" id="btn-catalog" onclick="showTab('catalog')">Danh mục API</button>
+  <span style="flex:1"></span>
+  <input id="keyInput" placeholder="Issue key, vd SCRUM-7" value="SCRUM-7">
+  <button class="go" onclick="loadContext(document.getElementById('keyInput').value)">Xem AI context</button>
+</header>
+<main>
+
+<div id="tab-demo">
+  <div id="feed">
+    <div class="card muted">Webhook events (tự cập nhật 3s/lần). Sửa một ticket trong Jira để thấy event mới.</div>
+    <div id="events"></div>
+  </div>
+  <div id="detail">
+    <div class="card muted">Bấm một event bên trái hoặc nhập issue key ở trên để xem <b>AI context</b> — đúng JSON mà AI sẽ nhận, kèm <b>trace các API đã gọi</b>.</div>
+    <div id="loading" class="card"><span class="spinner"></span>Đang gọi chuỗi API Jira...</div>
+    <div id="ctx"></div>
+  </div>
+</div>
+
+<div id="tab-catalog">
+  <div class="card muted">Toàn bộ API service sẽ dùng, nhóm theo vai trò trong flow:
+    <b>webhook trigger → đọc hiểu ticket → tìm ticket tương tự → phán đoán &amp; hành động → danh mục ngữ cảnh</b>.
+    Mỗi API ghi rõ <b style="color:#006644">nó giúp gì cho AI</b>. Bấm <b>Gọi thử</b> để thấy response thật từ Jira
+    (placeholder {key}/{project} lấy từ ô issue key ở góc phải trên). Chỉ API GET mới gọi thử được — API ghi/sửa hiển thị cách dùng.</div>
+  <div id="catalog"></div>
+</div>
+
+</main>
+<script>
+function esc(s) { return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+function showTab(t) {
+  document.getElementById('tab-demo').style.display = t === 'demo' ? 'flex' : 'none';
+  document.getElementById('tab-catalog').style.display = t === 'catalog' ? 'block' : 'none';
+  document.getElementById('btn-demo').classList.toggle('active', t === 'demo');
+  document.getElementById('btn-catalog').classList.toggle('active', t === 'catalog');
+}
+
+/* ===== tab demo ===== */
+async function poll() {
+  try {
+    const r = await fetch('/api/events');
+    const evs = await r.json();
+    document.getElementById('events').innerHTML = evs.map(e => `
+      <div class="card event" onclick="loadContext('${esc(e.key)}')">
+        <span class="ev-time">${esc(e.time)}</span>
+        <div class="ev-type">${esc(e.event)}</div>
+        <div><span class="ev-key">${esc(e.key)}</span><span class="ev-sum">${esc(e.summary)}</span></div>
+        ${e.changes && e.changes.length ? '<div class="ev-sum">&Delta; ' + e.changes.map(esc).join('; ') + '</div>' : ''}
+      </div>`).join('');
+  } catch (err) {}
+}
+setInterval(poll, 3000); poll();
+
+function ticketCard(t, cls) {
+  return `<div class="card ${cls||''}">
+    <h2>${esc(t.key)} — ${esc(t.summary)}</h2>
+    <span class="pill blue">${esc(t.type)}</span>
+    <span class="pill ${t.status_category==='done'?'green':''}">${esc(t.status)}</span>
+    ${t.resolution ? `<span class="pill green">resolution: ${esc(t.resolution)}</span>` : ''}
+    ${t.priority ? `<span class="pill">${esc(t.priority)}</span>` : ''}
+    ${(t.labels||[]).map(l=>`<span class="pill">${esc(l)}</span>`).join('')}
+    ${t.assignee ? `<span class="pill">giao: ${esc(t.assignee)}</span>` : '<span class="pill red">chưa gán</span>'}
+    ${t.description ? `<div class="desc">${esc(t.description)}</div>` : ''}
+    ${(t.comments||[]).length ? '<h3>Comments (' + t.comments.length + ')</h3>' +
+      t.comments.map(c=>`<div class="comment"><div class="who">${esc(c.by)} — ${esc((c.at||'').slice(0,16))}</div>${esc(c.text)}</div>`).join('') : ''}
+    ${(t.attachments||[]).length ? '<h3>Attachments</h3>' + t.attachments.map(a=>`<span class="pill">${esc(a.filename)} (${a.size}b)</span>`).join('') : ''}
+  </div>`;
+}
+
+async function loadContext(key) {
+  if (!key) return;
+  showTab('demo');
+  document.getElementById('keyInput').value = key;
+  document.getElementById('ctx').innerHTML = '';
+  document.getElementById('loading').style.display = 'block';
+  try {
+    const r = await fetch('/api/context/' + encodeURIComponent(key));
+    if (!r.ok) throw new Error((await r.json()).error || r.status);
+    const c = await r.json();
+    let html = '<h3>1. Ticket (đã normalize từ GET /issue + /comment)</h3>' + ticketCard(c.ticket);
+    html += `<h3>2. Ticket tương tự ĐÃ GIẢI QUYẾT (${c.similar_resolved.length}) — từ POST /search/jql</h3>`;
+    html += c.similar_resolved.length
+      ? c.similar_resolved.map(t => ticketCard(t, 'sim')).join('')
+      : '<div class="card muted">Không tìm thấy ticket tương tự nào đã Done.</div>';
+    html += '<h3>3. Hành động khả dụng (AI chỉ được chọn trong đây)</h3><div class="card">'
+      + '<b>Transitions:</b> ' + c.allowed_actions.transitions.map(t=>`<span class="pill blue">${esc(t.name)} &rarr; ${esc(t.to)}</span>`).join('')
+      + '<br><b>Có thể gán cho:</b> ' + c.allowed_actions.assignable_users.map(u=>`<span class="pill">${esc(u.name)}</span>`).join('')
+      + '</div>';
+    const totalMs = c.api_trace.reduce((s,t)=>s+t.ms, 0);
+    html += `<h3>4. Trace — ${c.api_trace.length} API call thực tế để dựng context này (${totalMs}ms)</h3>
+      <div class="card"><table class="trace">
+      <tr><th>#</th><th>Method</th><th>Endpoint</th><th>Tham số</th><th>ms</th><th>Vai trò</th></tr>` +
+      c.api_trace.map((t,i)=>`<tr><td>${i+1}</td>
+        <td><span class="method m-${esc(t.method)}">${esc(t.method)}</span></td>
+        <td><code>${esc(t.path)}</code></td>
+        <td><code>${esc(t.params)}</code></td>
+        <td>${t.ms}</td><td>${esc(t.note)}</td></tr>`).join('') +
+      '</table></div>';
+    document.getElementById('ctx').innerHTML = html;
+  } catch (err) {
+    document.getElementById('ctx').innerHTML = `<div class="card" style="color:#bf2600">Lỗi: ${esc(err.message)}</div>`;
+  } finally {
+    document.getElementById('loading').style.display = 'none';
+  }
+}
+
+/* ===== tab catalog ===== */
+function resolvePath(tpl) {
+  const key = document.getElementById('keyInput').value.trim() || 'SCRUM-7';
+  return tpl.replaceAll('{key}', key).replaceAll('{project}', key.split('-')[0]);
+}
+
+async function tryApi(btn, tpl) {
+  const target = resolvePath(tpl);
+  const pre = btn.parentElement.querySelector('pre.resp');
+  pre.style.display = 'block';
+  pre.textContent = 'Đang gọi GET ' + target + ' ...';
+  try {
+    const r = await fetch('/api/try?path=' + encodeURIComponent(target));
+    const d = await r.json();
+    pre.textContent = d.ok
+      ? `GET ${target}\n(${d.bytes} bytes)\n\n${d.preview}${d.bytes > 8000 ? '\n... (đã cắt bớt)' : ''}`
+      : `LỖI: ${d.error}`;
+  } catch (err) { pre.textContent = 'Lỗi: ' + err.message; }
+}
+
+async function loadCatalog() {
+  const r = await fetch('/api/catalog');
+  const groups = await r.json();
+  document.getElementById('catalog').innerHTML = groups.map(g => `
+    <div class="grp-title">${esc(g.group)}</div>` +
+    g.items.map(a => `
+      <div class="card api">
+        <span class="method m-${esc(a.method)}">${esc(a.method)}</span>
+        <code class="path">${esc(a.path)}</code>
+        <h2 style="margin-top:6px">${esc(a.name)}</h2>
+        <div class="ai-val"><b>Giúp gì cho AI:</b> ${esc(a.ai)}</div>
+        ${a.how ? `<div class="how"><b>Cách dùng:</b> ${esc(a.how)}</div>` : ''}
+        ${a.try ? `<button class="try-btn" onclick='tryApi(this, ${JSON.stringify(a.path)})'>&#9654; Gọi thử</button><pre class="resp" style="display:none"></pre>` : ''}
+      </div>`).join('')
+  ).join('');
+}
+loadCatalog();
+</script>
+</body>
+</html>

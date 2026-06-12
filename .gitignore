@@ -1,0 +1,12 @@
+# Bao mat - tuyet doi khong commit token
+API_token.txt
+*.token
+.env
+
+# Du lieu runtime
+webhook_payloads/
+ai_context_sample_*.json
+
+# Python
+__pycache__/
+*.pyc
