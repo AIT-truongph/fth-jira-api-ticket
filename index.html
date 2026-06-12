@@ -42,8 +42,15 @@
   table.trace { width: 100%; border-collapse: collapse; font-size: 12px; }
   table.trace td, table.trace th { padding: 4px 8px; border-bottom: 1px solid #f4f5f7; text-align: left; vertical-align: top; }
   table.trace code { background: #fafbfc; padding: 1px 4px; border-radius: 3px; font-size: 11px; }
-  /* tab catalog */
+  /* tab catalog + notes */
   #tab-catalog { display: none; max-width: 1100px; }
+  #tab-notes { display: none; max-width: 1100px; }
+  .note { border-left: 4px solid #6b778c; }
+  .note.t-bay { border-left-color: #de350b; }
+  .note.t-test { border-left-color: #36b37e; }
+  .note.t-rec { border-left-color: #0052cc; }
+  .note h2 { display: inline; margin-right: 8px; }
+  .note .txt { margin-top: 6px; font-size: 13px; line-height: 1.5; }
   .api { border-left: 4px solid #6554c0; }
   .method { display: inline-block; min-width: 46px; text-align: center; font-weight: 700; font-size: 11px; border-radius: 3px; padding: 2px 6px; margin-right: 8px; color: #fff; }
   .m-GET { background: #36b37e; } .m-POST { background: #0052cc; } .m-PUT { background: #ff8b00; } .m-DELETE { background: #de350b; }
@@ -62,6 +69,7 @@
   <h1>Jira API cho AI</h1>
   <button class="tab-btn active" id="btn-demo" onclick="showTab('demo')">Demo trực tiếp</button>
   <button class="tab-btn" id="btn-catalog" onclick="showTab('catalog')">Danh mục API</button>
+  <button class="tab-btn" id="btn-notes" onclick="showTab('notes')">Lưu ý quan trọng</button>
   <span style="flex:1"></span>
   <input id="keyInput" placeholder="Issue key, vd SCRUM-7" value="SCRUM-7">
   <button class="go" onclick="loadContext(document.getElementById('keyInput').value)">Xem AI context</button>
@@ -88,6 +96,14 @@
   <div id="catalog"></div>
 </div>
 
+<div id="tab-notes">
+  <div class="card muted">Toàn bộ phát hiện từ điều tra + kiểm chứng trên site thật, lọc từ các lần test.
+    <span class="pill red">bẫy</span> = chỗ dễ vấp đã gặp thật &nbsp;
+    <span class="pill green">đã test</span> = kiểm chứng trên site thật &nbsp;
+    <span class="pill blue">khuyến nghị</span> = nên làm theo</div>
+  <div id="notes"></div>
+</div>
+
 </main>
 <script>
 function esc(s) { return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
@@ -95,8 +111,9 @@ function esc(s) { return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g
 function showTab(t) {
   document.getElementById('tab-demo').style.display = t === 'demo' ? 'flex' : 'none';
   document.getElementById('tab-catalog').style.display = t === 'catalog' ? 'block' : 'none';
-  document.getElementById('btn-demo').classList.toggle('active', t === 'demo');
-  document.getElementById('btn-catalog').classList.toggle('active', t === 'catalog');
+  document.getElementById('tab-notes').style.display = t === 'notes' ? 'block' : 'none';
+  for (const x of ['demo','catalog','notes'])
+    document.getElementById('btn-' + x).classList.toggle('active', t === x);
 }
 
 /* ===== tab demo ===== */
@@ -205,6 +222,24 @@ async function loadCatalog() {
   ).join('');
 }
 loadCatalog();
+
+/* ===== tab notes ===== */
+const TAG_CLS = { 'bẫy': ['t-bay','red'], 'đã test': ['t-test','green'], 'khuyến nghị': ['t-rec','blue'] };
+async function loadNotes() {
+  const r = await fetch('/api/notes');
+  const groups = await r.json();
+  document.getElementById('notes').innerHTML = groups.map(g => `
+    <div class="grp-title">${esc(g.group)}</div>` +
+    g.items.map(n => {
+      const [cls, pill] = TAG_CLS[n.tag] || ['',''];
+      return `<div class="card note ${cls}">
+        <h2>${esc(n.title)}</h2><span class="pill ${pill}">${esc(n.tag)}</span>
+        <div class="txt">${esc(n.text)}</div>
+      </div>`;
+    }).join('')
+  ).join('');
+}
+loadNotes();
 </script>
 </body>
 </html>
