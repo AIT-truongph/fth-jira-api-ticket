@@ -10,8 +10,14 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-SITE = os.environ.get("JIRA_SITE", "https://haitruong.atlassian.net").rstrip("/")
-EMAIL = os.environ.get("JIRA_EMAIL", "haitruong7592@gmail.com")
+SITE = os.environ.get("JIRA_SITE", "https://your-site.atlassian.net").rstrip("/")
+EMAIL = os.environ.get("JIRA_EMAIL", "your-email@example.com")
+
+# Ghi de cuc bo (khong commit): tao file local_config.py canh repo voi SITE/EMAIL cua ban
+try:
+    from local_config import *  # noqa: F401,F403
+except ImportError:
+    pass
 
 
 def _load_token():

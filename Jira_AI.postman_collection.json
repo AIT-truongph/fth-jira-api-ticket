@@ -22,11 +22,11 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "https://haitruong.atlassian.net"
+      "value": "https://your-site.atlassian.net"
     },
     {
       "key": "username",
-      "value": "haitruong7592@gmail.com"
+      "value": "your-email@example.com"
     },
     {
       "key": "apiToken",

@@ -1,7 +1,8 @@
-# Bao mat - tuyet doi khong commit token
+# Bao mat - tuyet doi khong commit token / thong tin ca nhan
 API_token.txt
 *.token
 .env
+local_config.py
 
 # Du lieu runtime
 webhook_payloads/

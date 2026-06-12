@@ -123,8 +123,8 @@ collection = {
         {"key": "password", "value": "{{apiToken}}", "type": "string"},
     ]},
     "variable": [
-        {"key": "baseUrl", "value": "https://haitruong.atlassian.net"},
-        {"key": "username", "value": "haitruong7592@gmail.com"},
+        {"key": "baseUrl", "value": "https://your-site.atlassian.net"},
+        {"key": "username", "value": "your-email@example.com"},
         {"key": "apiToken", "value": ""},
         {"key": "issueKey", "value": "SCRUM-7"},
         {"key": "projectKey", "value": "SCRUM"},
