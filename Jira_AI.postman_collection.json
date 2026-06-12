@@ -1,0 +1,1509 @@
+{
+  "info": {
+    "name": "Jira API cho AI - 45 endpoints (sinh tu catalog_data.py)",
+    "description": "Danh muc API phuc vu flow: webhook -> AI doc ticket -> tim ticket tuong tu -> phan doan.\nKhop 100% voi tab 'Danh muc API' tren web demo.\n\nCACH DUNG: vao tab Variables cua collection, dien apiToken (tao tai id.atlassian.com/manage-profile/security/api-tokens), sua baseUrl/username/issueKey neu can -> Send.\nMo ta moi request ghi ro API do GIUP GI CHO AI.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "basic",
+    "basic": [
+      {
+        "key": "username",
+        "value": "{{username}}",
+        "type": "string"
+      },
+      {
+        "key": "password",
+        "value": "{{apiToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://haitruong.atlassian.net"
+    },
+    {
+      "key": "username",
+      "value": "haitruong7592@gmail.com"
+    },
+    {
+      "key": "apiToken",
+      "value": ""
+    },
+    {
+      "key": "issueKey",
+      "value": "SCRUM-7"
+    },
+    {
+      "key": "projectKey",
+      "value": "SCRUM"
+    },
+    {
+      "key": "projectId",
+      "value": "10000"
+    },
+    {
+      "key": "boardId",
+      "value": "1"
+    },
+    {
+      "key": "attachmentId",
+      "value": "10000"
+    },
+    {
+      "key": "accountId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Trigger — Webhook (Jira chủ động gọi mình)",
+      "item": [
+        {
+          "name": "Đăng ký webhook (cần quyền admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/webhooks/1.0/webhook",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "webhooks",
+                "1.0",
+                "webhook"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Điểm khởi đầu của cả flow: Jira tự báo khi ticket được tạo/sửa/comment, kèm JQL filter để chỉ nhận đúng project. Service KHÔNG cần polling.\n\nCACH DUNG: Body: {\"name\", \"url\", \"events\": [\"jira:issue_created\",\"jira:issue_updated\",\"comment_created\"], \"filters\": {\"issue-related-events-section\": \"project = SCRUM\"}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"AI ticket demo\",\n  \"url\": \"https://<tunnel-cua-ban>.trycloudflare.com/jira-webhook\",\n  \"events\": [\n    \"jira:issue_created\",\n    \"jira:issue_updated\",\n    \"comment_created\"\n  ],\n  \"filters\": {\n    \"issue-related-events-section\": \"project = {{projectKey}}\"\n  },\n  \"excludeBody\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Liệt kê webhook đã đăng ký",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/webhooks/1.0/webhook",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "webhooks",
+                "1.0",
+                "webhook"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Kiểm tra webhook đang trỏ về đâu, còn enabled không. DELETE vào URL self của từng webhook để gỡ.\n\nCACH DUNG: Không tham số."
+          }
+        },
+        {
+          "name": "Webhook động (chỉ cho OAuth/Connect app)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/webhook",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "webhook"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Phương án webhook khi xây app phân phối chính thức. KHÔNG dùng được với API token.\n\nCACH DUNG: Kèm GET /rest/api/3/webhook/failed (xem webhook gửi lỗi) và PUT /rest/api/3/webhook/refresh (gia hạn — webhook OAuth hết hạn sau 30 ngày).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://example.com/webhook\",\n  \"webhooks\": [\n    {\n      \"events\": [\n        \"jira:issue_created\"\n      ],\n      \"jqlFilter\": \"project = {{projectKey}}\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Đọc hiểu ticket (input chính cho AI)",
+      "item": [
+        {
+          "name": "Get issue — API trung tâm",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}?expand=renderedFields,names,changelog&fields=*all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}"
+              ],
+              "query": [
+                {
+                  "key": "expand",
+                  "value": "renderedFields,names,changelog"
+                },
+                {
+                  "key": "fields",
+                  "value": "*all"
+                }
+              ]
+            },
+            "description": "GIUP GI CHO AI: Một call lấy gần hết: summary, description, status, priority, labels, custom fields, issue links, subtasks, attachment metadata, changelog. 'names' dịch customfield_xxxxx thành tên người hiểu được; 'renderedFields' trả HTML thay vì ADF.\n\nCACH DUNG: Description mặc định là ADF (JSON) — cần converter sang text cho AI (xem adf_to_text trong jira_client.py)."
+          }
+        },
+        {
+          "name": "Get comments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/comment?orderBy=created",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "comment"
+              ],
+              "query": [
+                {
+                  "key": "orderBy",
+                  "value": "created"
+                }
+              ]
+            },
+            "description": "GIUP GI CHO AI: Thảo luận trong comment thường chứa nguyên nhân gốc và cách fix — phần giá trị nhất khi AI đọc ticket tương tự đã giải quyết.\n\nCACH DUNG: Phân trang startAt/maxResults; body comment cũng là ADF. Ticket JSM có cờ jsdPublic phân biệt comment nội bộ/công khai."
+          }
+        },
+        {
+          "name": "Get changelog",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/changelog",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "changelog"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Lịch sử ai đổi gì khi nào — AI hiểu ticket đã đi qua những bước nào, bị trả lại bao nhiêu lần.\n\nCACH DUNG: Hoặc gộp vào Get issue bằng expand=changelog. Đọc hàng loạt: POST /rest/api/3/changelog/bulkfetch."
+          }
+        },
+        {
+          "name": "Tải nội dung attachment (đã test: khớp 100%)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/attachment/content/{{attachmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "attachment",
+                "content",
+                "{{attachmentId}}"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Đọc log lỗi, config đính kèm — GET issue chỉ trả metadata, muốn AI đọc nội dung file phải gọi endpoint này.\n\nCACH DUNG: id từ fields.attachment[].id; response binary. Upload: POST /issue/{key}/attachments (multipart + header X-Atlassian-Token: no-check)."
+          }
+        },
+        {
+          "name": "Thumbnail ảnh đính kèm",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/attachment/thumbnail/{{attachmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "attachment",
+                "thumbnail",
+                "{{attachmentId}}"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Lấy bản thu nhỏ của screenshot khi không cần ảnh gốc (tiết kiệm băng thông/token vision).\n\nCACH DUNG: Kèm GET /attachment/{id}/expand/human — xem danh sách file BÊN TRONG file zip mà không cần tải về."
+          }
+        },
+        {
+          "name": "Get remote links",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/remotelink",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "remotelink"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Link ngoài gắn vào ticket (trang Confluence, PR...) — ngữ cảnh bổ sung.\n\nCACH DUNG: Không tham số."
+          }
+        },
+        {
+          "name": "Get worklogs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/worklog",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "worklog"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Ai đã làm bao nhiêu giờ trên ticket — tín hiệu về độ phức tạp thực tế và người hiểu ticket nhất.\n\nCACH DUNG: Phân trang startAt/maxResults."
+          }
+        },
+        {
+          "name": "Get watchers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/watchers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "watchers"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Ai đang theo dõi ticket — tín hiệu mức độ quan tâm, ứng viên để hỏi thêm thông tin.\n\nCACH DUNG: Kèm GET /issue/{key}/votes — số vote (mức độ mong muốn từ người dùng)."
+          }
+        },
+        {
+          "name": "Đọc issue properties",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/properties",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "properties"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Đọc lại trạng thái AI đã lưu trên ticket (đã xử lý chưa, kết quả gì) — xem mục PUT properties ở nhóm 4.\n\nCACH DUNG: GET .../properties liệt kê keys; GET .../properties/{propertyKey} đọc giá trị."
+          }
+        },
+        {
+          "name": "Bulk fetch — lấy chi tiết hàng loạt",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/bulkfetch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "bulkfetch"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Sau khi search ra danh sách key, lấy chi tiết tối đa 100 ticket/call thay vì gọi lẻ.\n\nCACH DUNG: Body: {\"issueIdsOrKeys\": [\"SCRUM-5\",\"SCRUM-6\"], \"fields\": [...]}. Tương tự POST /comment/list đọc comment hàng loạt theo id.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"issueIdsOrKeys\": [\n    \"{{issueKey}}\"\n  ],\n  \"fields\": [\n    \"summary\",\n    \"status\",\n    \"resolution\",\n    \"labels\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Danh mục toàn bộ field",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/field",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "field"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Bảng tra customfield_xxxxx → tên + kiểu dữ liệu. Cache 1 lần dùng mãi.\n\nCACH DUNG: Với custom field dạng select: GET /field/{fieldId}/contexts rồi GET /field/{fieldId}/context/{contextId}/option để lấy danh sách giá trị hợp lệ."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Tìm ticket tương tự đã giải quyết",
+      "item": [
+        {
+          "name": "Enhanced JQL search — endpoint hiện hành",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/search/jql?jql=project = {{projectKey}} AND statusCategory = Done AND text ~ \"timeout\"&fields=summary,status,resolution&maxResults=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "search",
+                "jql"
+              ],
+              "query": [
+                {
+                  "key": "jql",
+                  "value": "project = {{projectKey}} AND statusCategory = Done AND text ~ \"timeout\""
+                },
+                {
+                  "key": "fields",
+                  "value": "summary,status,resolution"
+                },
+                {
+                  "key": "maxResults",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "GIUP GI CHO AI: Trái tim của việc tìm ticket tương tự. JQL mẫu: statusCategory = Done AND (text ~ \"keywords\" OR labels in (...)). LƯU Ý: text ~ là keyword search (không semantic) và KHÔNG quét labels.\n\nCACH DUNG: Endpoint /search cũ đã khai tử. JQL phải bounded (có project=...). Phân trang bằng nextPageToken (không còn startAt). reconcileIssues=[ids] nếu cần đọc-ngay-sau-ghi."
+          }
+        },
+        {
+          "name": "Issue picker — gợi ý nhanh theo text",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/picker?query=timeout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "picker"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "timeout"
+                }
+              ]
+            },
+            "description": "GIUP GI CHO AI: Bước tìm ứng viên rẻ và nhanh trước khi search JQL đầy đủ. Trả 2 danh sách: lịch sử người dùng + kết quả khớp text.\n\nCACH DUNG: query = chuỗi tự do; currentJQL để giới hạn phạm vi; currentProjectId lọc theo project."
+          }
+        },
+        {
+          "name": "Đếm nhanh số kết quả",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/search/approximate-count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "search",
+                "approximate-count"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Biết JQL trả khoảng bao nhiêu ticket trước khi fetch — quyết định có cần thu hẹp điều kiện không.\n\nCACH DUNG: Body: {\"jql\": \"...\"}. JQL phải bounded.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jql\": \"project = {{projectKey}} AND statusCategory = Done\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Validate JQL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/jql/parse",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "jql",
+                "parse"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Nếu để AI tự sinh JQL: parse trước khi chạy, lỗi thì trả cho AI sửa — tránh request hỏng.\n\nCACH DUNG: Body: {\"queries\": [\"project = SCRUM AND ...\"]}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queries\": [\n    \"project = {{projectKey}} AND text ~ \\\"timeout\\\"\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Kiểm tra issue khớp JQL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/jql/match",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "jql",
+                "match"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Trả lời câu 'ticket X có thuộc diện Y không' mà không cần search lại toàn bộ.\n\nCACH DUNG: Body: {\"jqls\": [...], \"issueIds\": [...]}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jqls\": [\n    \"project = {{projectKey}} AND statusCategory = Done\"\n  ],\n  \"issueIds\": [\n    10000\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Danh mục field/operator JQL",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/jql/autocompletedata",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "jql",
+                "autocompletedata"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Đưa vào prompt làm tài liệu tham chiếu để AI sinh JQL đúng cú pháp, đúng tên field của site.\n\nCACH DUNG: Cache 1 lần."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Phán đoán & hành động (AI quyết → service làm)",
+      "item": [
+        {
+          "name": "Các bước chuyển hợp lệ",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/transitions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "transitions"
+              ]
+            },
+            "description": "GIUP GI CHO AI: AI chỉ được đề xuất chuyển trạng thái trong danh sách này — workflow mỗi project khác nhau, không đoán được.\n\nCACH DUNG: Lấy transition id ở đây rồi POST cùng đường dẫn để thực hiện."
+          }
+        },
+        {
+          "name": "Field nào sửa được + giá trị hợp lệ",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/editmeta",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "editmeta"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Trước khi AI đề xuất sửa field: biết field đó có trên màn hình edit không, nhận giá trị gì — tránh đề xuất bất khả thi.\n\nCACH DUNG: Không tham số."
+          }
+        },
+        {
+          "name": "Người được phép gán (đã test)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/user/assignable/search?issueKey={{issueKey}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "user",
+                "assignable",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "issueKey",
+                  "value": "{{issueKey}}"
+                }
+              ]
+            },
+            "description": "GIUP GI CHO AI: AI đề xuất assignee phải nằm trong danh sách này, nếu không PUT assignee sẽ 400.\n\nCACH DUNG: Trả accountId — Jira Cloud chỉ nhận accountId, không nhận username/email."
+          }
+        },
+        {
+          "name": "Quyền của tài khoản bot (đã test)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/mypermissions?projectKey={{projectKey}}&permissions=ASSIGN_ISSUES,TRANSITION_ISSUES,ADD_COMMENTS,EDIT_ISSUES",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "mypermissions"
+              ],
+              "query": [
+                {
+                  "key": "projectKey",
+                  "value": "{{projectKey}}"
+                },
+                {
+                  "key": "permissions",
+                  "value": "ASSIGN_ISSUES,TRANSITION_ISSUES,ADD_COMMENTS,EDIT_ISSUES"
+                }
+              ]
+            },
+            "description": "GIUP GI CHO AI: Service tự kiểm tra đủ quyền làm hành động AI đề xuất không, trước khi thử và thất bại.\n\nCACH DUNG: permissions = danh sách permission key cách nhau dấu phẩy."
+          }
+        },
+        {
+          "name": "Components + lead",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/project/{{projectKey}}/components",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "project",
+                "{{projectKey}}",
+                "components"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Mỗi component có 'lead' (người phụ trách) — nguồn cho quy ước 'bug component X → giao lead X'.\n\nCACH DUNG: Kèm GET /component/{id}/relatedIssueCounts — component nào đang nhiều bug."
+          }
+        },
+        {
+          "name": "Vai trò trong project",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/project/{{projectKey}}/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "project",
+                "{{projectKey}}",
+                "role"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Ai là Developer/Admin của project — gợi ý assignee theo vai trò.\n\nCACH DUNG: Trả URL từng role, gọi tiếp để lấy thành viên."
+          }
+        },
+        {
+          "name": "Tìm người theo tên",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/groupuserpicker?query=hai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "groupuserpicker"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "hai"
+                }
+              ]
+            },
+            "description": "GIUP GI CHO AI: Resolve tên người được nhắc trong comment ('giao cho anh Nam') → accountId.\n\nCACH DUNG: query = tên gần đúng."
+          }
+        },
+        {
+          "name": "Ghi comment (hành động an toàn nhất — nên là mặc định)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/comment",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "comment"
+              ]
+            },
+            "description": "GIUP GI CHO AI: AI ghi kết quả phân tích + link ticket tương tự + gợi ý cách fix vào ticket.\n\nCACH DUNG: Body comment phải là ADF.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": {\n    \"type\": \"doc\",\n    \"version\": 1,\n    \"content\": [\n      {\n        \"type\": \"paragraph\",\n        \"content\": [\n          {\n            \"type\": \"text\",\n            \"text\": \"Phan tich tu AI: ticket tuong tu SCRUM-5 da fix bang cach tang pool size.\"\n          }\n        ]\n      }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Gán người xử lý",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/assignee",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "assignee"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Thực thi đề xuất assignee của AI.\n\nCACH DUNG: Body: {\"accountId\": \"...\"}. Kiểm tra assignable trước (xem trên).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountId\": \"{{accountId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Chuyển trạng thái",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/transitions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "transitions"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Thực thi đề xuất chuyển workflow của AI.\n\nCACH DUNG: Body: {\"transition\": {\"id\": \"41\"}}. Response 204 RỖNG — client phải xử lý body rỗng (đã vấp khi test).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transition\": {\n    \"id\": \"41\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Sửa field (label, priority, component...)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Thực thi đề xuất chỉnh field của AI.\n\nCACH DUNG: Thêm ?notifyUsers=false để không spam email watcher. Body theo editmeta.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fields\": {\n    \"labels\": [\n      \"ai-reviewed\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Gửi thông báo đích danh",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/notify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "notify"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Khi AI xác định cần người cụ thể chú ý (vd nghi trùng ticket đang mở của họ).\n\nCACH DUNG: Body: {\"subject\", \"textBody\", \"to\": {\"users\": [...]}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subject\": \"Ticket can chu y\",\n  \"textBody\": \"AI phat hien ticket nay nghi trung voi ticket cua ban.\",\n  \"to\": {\n    \"users\": [\n      {\n        \"accountId\": \"{{accountId}}\"\n      }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Tạo link giữa 2 ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issueLink",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issueLink"
+              ]
+            },
+            "description": "GIUP GI CHO AI: AI phát hiện trùng/liên quan → tạo link 'duplicates'/'relates to' để người đọc thấy ngay.\n\nCACH DUNG: Body: {\"type\": {\"name\": \"Duplicate\"}, \"inwardIssue\": {\"key\"}, \"outwardIssue\": {\"key\"}}. Danh sách loại link: GET /issueLinkType.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": {\n    \"name\": \"Duplicate\"\n  },\n  \"inwardIssue\": {\n    \"key\": \"{{issueKey}}\"\n  },\n  \"outwardIssue\": {\n    \"key\": \"SCRUM-5\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Issue property — bộ nhớ ẩn của AI trên ticket",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/properties/ai-state",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "properties",
+                "ai-state"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Lưu 'ticket này AI xử lý chưa, kết quả gì' ngay trên ticket mà không làm bẩn field hiển thị → giải quyết webhook bắn trùng (idempotency).\n\nCACH DUNG: PUT body JSON bất kỳ; GET cùng đường dẫn để đọc lại.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"processed_at\": \"2026-06-12T15:00:00+07:00\",\n  \"action\": \"commented\",\n  \"similar\": [\n    \"SCRUM-5\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Danh mục ngữ cảnh (cache 1 lần khi khởi động)",
+      "item": [
+        {
+          "name": "Tài khoản đang đăng nhập",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/myself",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "myself"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Smoke test xác thực; lấy accountId của bot để lọc comment do chính bot viết (tránh AI tự đọc lại output của mình)."
+          }
+        },
+        {
+          "name": "Thông tin site",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/serverInfo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "serverInfo"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Kiểm tra kết nối + xác nhận deploymentType=Cloud (API v3 chỉ có trên Cloud).\n\nCACH DUNG: Gọi được không cần đăng nhập."
+          }
+        },
+        {
+          "name": "Các mức priority",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/priority",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "priority"
+              ]
+            },
+            "description": "GIUP GI CHO AI: AI đề xuất đổi priority phải dùng giá trị trong này."
+          }
+        },
+        {
+          "name": "Các loại resolution",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/resolution",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "resolution"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Hiểu 'Fixed' khác 'Won't Fix' khi đọc ticket đã đóng."
+          }
+        },
+        {
+          "name": "Workflow theo issue type của project",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/project/{{projectKey}}/statuses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "project",
+                "{{projectKey}}",
+                "statuses"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Bug và Task có thể đi workflow khác nhau — AI cần biết trước khi đề xuất.\n\nCACH DUNG: Toàn site: GET /statuses/search; nhóm trạng thái: GET /statuscategory."
+          }
+        },
+        {
+          "name": "Toàn bộ labels",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/label",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "label"
+              ]
+            },
+            "description": "GIUP GI CHO AI: AI gắn label nên chọn label có sẵn thay vì sinh mới tùy tiện."
+          }
+        },
+        {
+          "name": "Versions của project",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/project/{{projectKey}}/versions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "project",
+                "{{projectKey}}",
+                "versions"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Ngữ cảnh affectedVersion/fixVersion khi AI đề xuất gắn bản phát hành.\n\nCACH DUNG: Kèm GET /version/{id}/unresolvedIssueCount — version nào còn nhiều bug."
+          }
+        },
+        {
+          "name": "Issue types của project",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issuetype/project?projectId={{projectId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issuetype",
+                "project"
+              ],
+              "query": [
+                {
+                  "key": "projectId",
+                  "value": "{{projectId}}"
+                }
+              ]
+            },
+            "description": "GIUP GI CHO AI: AI phân loại ticket (Bug/Task/Story) theo đúng bộ loại của project.\n\nCACH DUNG: projectId là id số (lấy từ GET /project/{key})."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Hai họ API ngoài Platform (cùng site, cùng auth, tài liệu riêng)",
+      "item": [
+        {
+          "name": "Agile API — boards",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/agile/1.0/board",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "agile",
+                "1.0",
+                "board"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Ngữ cảnh Scrum/Kanban: ticket thuộc board nào. Platform API chỉ lộ sprint qua customfield.\n\nCACH DUNG: Họ /rest/agile/1.0/: board/{id}/sprint (sprint active), sprint/{id}/issue, epic... Tài liệu: developer.atlassian.com → Jira Software Cloud REST API."
+          }
+        },
+        {
+          "name": "Agile API — sprint đang chạy",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/agile/1.0/board/{{boardId}}/sprint?state=active",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "agile",
+                "1.0",
+                "board",
+                "{{boardId}}",
+                "sprint"
+              ],
+              "query": [
+                {
+                  "key": "state",
+                  "value": "active"
+                }
+              ]
+            },
+            "description": "GIUP GI CHO AI: Ticket mới có thuộc sprint hiện tại không → mức độ khẩn cấp khác nhau.\n\nCACH DUNG: boardId từ GET /rest/agile/1.0/board."
+          }
+        },
+        {
+          "name": "JSM API — support request",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/servicedeskapi/request/{{issueKey}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "servicedeskapi",
+                "request",
+                "{{issueKey}}"
+              ]
+            },
+            "description": "GIUP GI CHO AI: CHỈ cần khi ticket là support request của khách hàng (project JSM): SLA, request type, comment public/internal (cờ jsdPublic).\n\nCACH DUNG: Site phải bật Jira Service Management. Với ticket software thuần thì bỏ qua nhóm này."
+          }
+        }
+      ]
+    }
+  ]
+}
