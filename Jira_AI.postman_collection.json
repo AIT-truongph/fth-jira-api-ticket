@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Jira API cho AI - 45 endpoints (sinh tu catalog_data.py)",
-    "description": "Danh muc API phuc vu flow: webhook -> AI doc ticket -> tim ticket tuong tu -> phan doan.\nKhop 100% voi tab 'Danh muc API' tren web demo.\n\nCACH DUNG: vao tab Variables cua collection, dien apiToken (tao tai id.atlassian.com/manage-profile/security/api-tokens), sua baseUrl/username/issueKey neu can -> Send.\nMo ta moi request ghi ro API do GIUP GI CHO AI.",
+    "name": "Jira API cho AI (52 endpoints, folder & ten theo Jira doc)",
+    "description": "Danh muc API phuc vu flow: webhook -> AI doc ticket -> tim ticket tuong tu -> phan doan.\nFolder va ten request DAT THEO tai lieu chinh thong Jira (tag + operation summary) de doi chieu truc tiep voi developer.atlassian.com. Moi request co link tai lieu trong phan Description, kem ghi chu 'GIUP GI CHO AI'.\n\nCACH DUNG: tab Variables -> dien apiToken (id.atlassian.com/manage-profile/security/api-tokens), sua baseUrl/username/issueKey -> Send.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -63,10 +63,10 @@
   ],
   "item": [
     {
-      "name": "1. Trigger — Webhook (Jira chủ động gọi mình)",
+      "name": "Webhooks (legacy admin)",
       "item": [
         {
-          "name": "Đăng ký webhook (cần quyền admin)",
+          "name": "Register webhook",
           "request": {
             "method": "POST",
             "header": [
@@ -91,7 +91,7 @@
                 "webhook"
               ]
             },
-            "description": "GIUP GI CHO AI: Điểm khởi đầu của cả flow: Jira tự báo khi ticket được tạo/sửa/comment, kèm JQL filter để chỉ nhận đúng project. Service KHÔNG cần polling.\n\nCACH DUNG: Body: {\"name\", \"url\", \"events\": [\"jira:issue_created\",\"jira:issue_updated\",\"comment_created\"], \"filters\": {\"issue-related-events-section\": \"project = SCRUM\"}}.",
+            "description": "== JIRA DOC ==\nFolder: Webhooks (legacy admin)\nOperation: Register webhook\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/webhooks/#registering-a-webhook-using-the-jira-rest-api\n\n== GIUP GI CHO AI ==\nĐiểm khởi đầu của cả flow: Jira tự báo khi ticket được tạo/sửa/comment, kèm JQL filter để chỉ nhận đúng project. Service KHÔNG cần polling.\n\nCACH DUNG: Body: {\"name\", \"url\", \"events\": [\"jira:issue_created\",\"jira:issue_updated\",\"comment_created\"], \"filters\": {\"issue-related-events-section\": \"project = SCRUM\"}}.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"AI ticket demo\",\n  \"url\": \"https://<tunnel-cua-ban>.trycloudflare.com/jira-webhook\",\n  \"events\": [\n    \"jira:issue_created\",\n    \"jira:issue_updated\",\n    \"comment_created\"\n  ],\n  \"filters\": {\n    \"issue-related-events-section\": \"project = {{projectKey}}\"\n  },\n  \"excludeBody\": false\n}",
@@ -104,7 +104,7 @@
           }
         },
         {
-          "name": "Liệt kê webhook đã đăng ký",
+          "name": "Get registered webhooks",
           "request": {
             "method": "GET",
             "header": [
@@ -125,11 +125,16 @@
                 "webhook"
               ]
             },
-            "description": "GIUP GI CHO AI: Kiểm tra webhook đang trỏ về đâu, còn enabled không. DELETE vào URL self của từng webhook để gỡ.\n\nCACH DUNG: Không tham số."
+            "description": "== JIRA DOC ==\nFolder: Webhooks (legacy admin)\nOperation: Get registered webhooks\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/webhooks/\n\n== GIUP GI CHO AI ==\nKiểm tra webhook đang trỏ về đâu, còn enabled không. DELETE vào URL self của từng webhook để gỡ.\n\nCACH DUNG: Không tham số."
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "item": [
         {
-          "name": "Webhook động (chỉ cho OAuth/Connect app)",
+          "name": "Register dynamic webhooks",
           "request": {
             "method": "POST",
             "header": [
@@ -154,7 +159,7 @@
                 "webhook"
               ]
             },
-            "description": "GIUP GI CHO AI: Phương án webhook khi xây app phân phối chính thức. KHÔNG dùng được với API token.\n\nCACH DUNG: Kèm GET /rest/api/3/webhook/failed (xem webhook gửi lỗi) và PUT /rest/api/3/webhook/refresh (gia hạn — webhook OAuth hết hạn sau 30 ngày).",
+            "description": "== JIRA DOC ==\nFolder: Webhooks\nOperation: Register dynamic webhooks\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-webhooks/#api-rest-api-3-webhook-post\n\n== GIUP GI CHO AI ==\nPhương án webhook khi xây app phân phối chính thức. KHÔNG dùng được với API token.\n\nCACH DUNG: Kèm GET /rest/api/3/webhook/failed (xem webhook gửi lỗi) và PUT /rest/api/3/webhook/refresh (gia hạn — webhook OAuth hết hạn sau 30 ngày).",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"url\": \"https://example.com/webhook\",\n  \"webhooks\": [\n    {\n      \"events\": [\n        \"jira:issue_created\"\n      ],\n      \"jqlFilter\": \"project = {{projectKey}}\"\n    }\n  ]\n}",
@@ -169,10 +174,10 @@
       ]
     },
     {
-      "name": "2. Đọc hiểu ticket (input chính cho AI)",
+      "name": "Issues",
       "item": [
         {
-          "name": "Get issue — API trung tâm",
+          "name": "Get issue",
           "request": {
             "method": "GET",
             "header": [
@@ -204,9 +209,360 @@
                 }
               ]
             },
-            "description": "GIUP GI CHO AI: Một call lấy gần hết: summary, description, status, priority, labels, custom fields, issue links, subtasks, attachment metadata, changelog. 'names' dịch customfield_xxxxx thành tên người hiểu được; 'renderedFields' trả HTML thay vì ADF.\n\nCACH DUNG: Description mặc định là ADF (JSON) — cần converter sang text cho AI (xem adf_to_text trong jira_client.py)."
+            "description": "== JIRA DOC ==\nFolder: Issues\nOperation: Get issue\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issues/#api-rest-api-3-issue-issueidorkey-get\n\n== GIUP GI CHO AI ==\nMột call lấy gần hết: summary, description, status, priority, labels, custom fields, issue links, subtasks, attachment metadata, changelog. 'names' dịch customfield_xxxxx thành tên người hiểu được; 'renderedFields' trả HTML thay vì ADF.\n\nCACH DUNG: Description mặc định là ADF (JSON) — cần converter sang text cho AI (xem adf_to_text trong jira_client.py)."
           }
         },
+        {
+          "name": "Get changelogs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/changelog",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "changelog"
+              ]
+            },
+            "description": "== JIRA DOC ==\nFolder: Issues\nOperation: Get changelogs\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issues/#api-rest-api-3-issue-issueidorkey-changelog-get\n\n== GIUP GI CHO AI ==\nLịch sử ai đổi gì khi nào — AI hiểu ticket đã đi qua những bước nào, bị trả lại bao nhiêu lần.\n\nCACH DUNG: Hoặc gộp vào Get issue bằng expand=changelog. Đọc hàng loạt: POST /rest/api/3/changelog/bulkfetch."
+          }
+        },
+        {
+          "name": "Bulk fetch issues",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/bulkfetch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "bulkfetch"
+              ]
+            },
+            "description": "== JIRA DOC ==\nFolder: Issues\nOperation: Bulk fetch issues\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issues/#api-rest-api-3-issue-bulkfetch-post\n\n== GIUP GI CHO AI ==\nSau khi search ra danh sách key, lấy chi tiết tối đa 100 ticket/call thay vì gọi lẻ.\n\nCACH DUNG: Body: {\"issueIdsOrKeys\": [\"SCRUM-5\",\"SCRUM-6\"], \"fields\": [...]}. Tương tự POST /comment/list đọc comment hàng loạt theo id.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"issueIdsOrKeys\": [\n    \"{{issueKey}}\"\n  ],\n  \"fields\": [\n    \"summary\",\n    \"status\",\n    \"resolution\",\n    \"labels\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Bulk fetch changelogs",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/changelog/bulkfetch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "changelog",
+                "bulkfetch"
+              ]
+            },
+            "description": "== JIRA DOC ==\nFolder: Issues\nOperation: Bulk fetch changelogs\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issues/#api-rest-api-3-changelog-bulkfetch-post\n\n== GIUP GI CHO AI ==\nLấy lịch sử thay đổi của nhiều ticket cùng lúc — dựng bức tranh các ticket tương tự đã đi qua những bước nào.\n\nCACH DUNG: Body: {\"issueIdsOrKeys\": [\"SCRUM-5\",\"SCRUM-6\"]}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"issueIdsOrKeys\": [\n    \"{{issueKey}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get transitions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/transitions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "transitions"
+              ]
+            },
+            "description": "== JIRA DOC ==\nFolder: Issues\nOperation: Get transitions\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issues/#api-rest-api-3-issue-issueidorkey-transitions-get\n\n== GIUP GI CHO AI ==\nAI chỉ được đề xuất chuyển trạng thái trong danh sách này — workflow mỗi project khác nhau, không đoán được.\n\nCACH DUNG: Lấy transition id ở đây rồi POST cùng đường dẫn để thực hiện."
+          }
+        },
+        {
+          "name": "Get edit issue metadata",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/editmeta",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "editmeta"
+              ]
+            },
+            "description": "== JIRA DOC ==\nFolder: Issues\nOperation: Get edit issue metadata\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issues/#api-rest-api-3-issue-issueidorkey-editmeta-get\n\n== GIUP GI CHO AI ==\nTrước khi AI đề xuất sửa field: biết field đó có trên màn hình edit không, nhận giá trị gì — tránh đề xuất bất khả thi.\n\nCACH DUNG: Không tham số."
+          }
+        },
+        {
+          "name": "Get create metadata issue types for a project",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/createmeta/{{projectKey}}/issuetypes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "createmeta",
+                "{{projectKey}}",
+                "issuetypes"
+              ]
+            },
+            "description": "== JIRA DOC ==\nFolder: Issues\nOperation: Get create metadata issue types for a project\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issues/#api-rest-api-3-issue-createmeta-projectidorkey-issuetypes-get\n\n== GIUP GI CHO AI ==\nChỉ cần nếu cho AI tạo ticket mới (vd tách bug, tạo subtask): biết project nhận những issue type nào, field nào bắt buộc khi tạo.\n\nCACH DUNG: Lấy issueTypeId ở đây rồi GET /issue/createmeta/{project}/issuetypes/{issueTypeId} để biết chi tiết field bắt buộc của từng loại."
+          }
+        },
+        {
+          "name": "Assign issue",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/assignee",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "assignee"
+              ]
+            },
+            "description": "== JIRA DOC ==\nFolder: Issues\nOperation: Assign issue\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issues/#api-rest-api-3-issue-issueidorkey-assignee-put\n\n== GIUP GI CHO AI ==\nThực thi đề xuất assignee của AI.\n\nCACH DUNG: Body: {\"accountId\": \"...\"}. Kiểm tra assignable trước (xem trên).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountId\": \"{{accountId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Transition issue",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/transitions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "transitions"
+              ]
+            },
+            "description": "== JIRA DOC ==\nFolder: Issues\nOperation: Transition issue\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issues/#api-rest-api-3-issue-issueidorkey-transitions-post\n\n== GIUP GI CHO AI ==\nThực thi đề xuất chuyển workflow của AI.\n\nCACH DUNG: Body: {\"transition\": {\"id\": \"41\"}}. Response 204 RỖNG — client phải xử lý body rỗng (đã vấp khi test).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transition\": {\n    \"id\": \"41\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Edit issue",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}"
+              ]
+            },
+            "description": "== JIRA DOC ==\nFolder: Issues\nOperation: Edit issue\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issues/#api-rest-api-3-issue-issueidorkey-put\n\n== GIUP GI CHO AI ==\nThực thi đề xuất chỉnh field của AI.\n\nCACH DUNG: Thêm ?notifyUsers=false để không spam email watcher. Body theo editmeta.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fields\": {\n    \"labels\": [\n      \"ai-reviewed\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Send notification for issue",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/notify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "notify"
+              ]
+            },
+            "description": "== JIRA DOC ==\nFolder: Issues\nOperation: Send notification for issue\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issues/#api-rest-api-3-issue-issueidorkey-notify-post\n\n== GIUP GI CHO AI ==\nKhi AI xác định cần người cụ thể chú ý (vd nghi trùng ticket đang mở của họ).\n\nCACH DUNG: Body: {\"subject\", \"textBody\", \"to\": {\"users\": [...]}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subject\": \"Ticket can chu y\",\n  \"textBody\": \"AI phat hien ticket nay nghi trung voi ticket cua ban.\",\n  \"to\": {\n    \"users\": [\n      {\n        \"accountId\": \"{{accountId}}\"\n      }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Issue comments",
+      "item": [
         {
           "name": "Get comments",
           "request": {
@@ -237,239 +593,11 @@
                 }
               ]
             },
-            "description": "GIUP GI CHO AI: Thảo luận trong comment thường chứa nguyên nhân gốc và cách fix — phần giá trị nhất khi AI đọc ticket tương tự đã giải quyết.\n\nCACH DUNG: Phân trang startAt/maxResults; body comment cũng là ADF. Ticket JSM có cờ jsdPublic phân biệt comment nội bộ/công khai."
+            "description": "== JIRA DOC ==\nFolder: Issue comments\nOperation: Get comments\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-comments/#api-rest-api-3-issue-issueidorkey-comment-get\n\n== GIUP GI CHO AI ==\nThảo luận trong comment thường chứa nguyên nhân gốc và cách fix — phần giá trị nhất khi AI đọc ticket tương tự đã giải quyết.\n\nCACH DUNG: Phân trang startAt/maxResults; body comment cũng là ADF. Ticket JSM có cờ jsdPublic phân biệt comment nội bộ/công khai."
           }
         },
         {
-          "name": "Get changelog",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/changelog",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rest",
-                "api",
-                "3",
-                "issue",
-                "{{issueKey}}",
-                "changelog"
-              ]
-            },
-            "description": "GIUP GI CHO AI: Lịch sử ai đổi gì khi nào — AI hiểu ticket đã đi qua những bước nào, bị trả lại bao nhiêu lần.\n\nCACH DUNG: Hoặc gộp vào Get issue bằng expand=changelog. Đọc hàng loạt: POST /rest/api/3/changelog/bulkfetch."
-          }
-        },
-        {
-          "name": "Tải nội dung attachment (đã test: khớp 100%)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/rest/api/3/attachment/content/{{attachmentId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rest",
-                "api",
-                "3",
-                "attachment",
-                "content",
-                "{{attachmentId}}"
-              ]
-            },
-            "description": "GIUP GI CHO AI: Đọc log lỗi, config đính kèm — GET issue chỉ trả metadata, muốn AI đọc nội dung file phải gọi endpoint này.\n\nCACH DUNG: id từ fields.attachment[].id; response binary. Upload: POST /issue/{key}/attachments (multipart + header X-Atlassian-Token: no-check)."
-          }
-        },
-        {
-          "name": "Thumbnail ảnh đính kèm",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/rest/api/3/attachment/thumbnail/{{attachmentId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rest",
-                "api",
-                "3",
-                "attachment",
-                "thumbnail",
-                "{{attachmentId}}"
-              ]
-            },
-            "description": "GIUP GI CHO AI: Lấy bản thu nhỏ của screenshot khi không cần ảnh gốc (tiết kiệm băng thông/token vision).\n\nCACH DUNG: Kèm GET /attachment/{id}/expand/human — xem danh sách file BÊN TRONG file zip mà không cần tải về."
-          }
-        },
-        {
-          "name": "Get remote links",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/remotelink",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rest",
-                "api",
-                "3",
-                "issue",
-                "{{issueKey}}",
-                "remotelink"
-              ]
-            },
-            "description": "GIUP GI CHO AI: Link ngoài gắn vào ticket (trang Confluence, PR...) — ngữ cảnh bổ sung.\n\nCACH DUNG: Không tham số."
-          }
-        },
-        {
-          "name": "Get worklogs",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/worklog",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rest",
-                "api",
-                "3",
-                "issue",
-                "{{issueKey}}",
-                "worklog"
-              ]
-            },
-            "description": "GIUP GI CHO AI: Ai đã làm bao nhiêu giờ trên ticket — tín hiệu về độ phức tạp thực tế và người hiểu ticket nhất.\n\nCACH DUNG: Phân trang startAt/maxResults."
-          }
-        },
-        {
-          "name": "Get watchers",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/watchers",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rest",
-                "api",
-                "3",
-                "issue",
-                "{{issueKey}}",
-                "watchers"
-              ]
-            },
-            "description": "GIUP GI CHO AI: Ai đang theo dõi ticket — tín hiệu mức độ quan tâm, ứng viên để hỏi thêm thông tin.\n\nCACH DUNG: Kèm GET /issue/{key}/votes — số vote (mức độ mong muốn từ người dùng)."
-          }
-        },
-        {
-          "name": "Đọc issue properties",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/properties",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rest",
-                "api",
-                "3",
-                "issue",
-                "{{issueKey}}",
-                "properties"
-              ]
-            },
-            "description": "GIUP GI CHO AI: Đọc lại trạng thái AI đã lưu trên ticket (đã xử lý chưa, kết quả gì) — xem mục PUT properties ở nhóm 4.\n\nCACH DUNG: GET .../properties liệt kê keys; GET .../properties/{propertyKey} đọc giá trị."
-          }
-        },
-        {
-          "name": "Bulk fetch — lấy chi tiết hàng loạt",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/rest/api/3/issue/bulkfetch",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rest",
-                "api",
-                "3",
-                "issue",
-                "bulkfetch"
-              ]
-            },
-            "description": "GIUP GI CHO AI: Sau khi search ra danh sách key, lấy chi tiết tối đa 100 ticket/call thay vì gọi lẻ.\n\nCACH DUNG: Body: {\"issueIdsOrKeys\": [\"SCRUM-5\",\"SCRUM-6\"], \"fields\": [...]}. Tương tự POST /comment/list đọc comment hàng loạt theo id.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"issueIdsOrKeys\": [\n    \"{{issueKey}}\"\n  ],\n  \"fields\": [\n    \"summary\",\n    \"status\",\n    \"resolution\",\n    \"labels\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Đọc comment hàng loạt theo ID",
+          "name": "Get comments by IDs",
           "request": {
             "method": "POST",
             "header": [
@@ -495,7 +623,7 @@
                 "list"
               ]
             },
-            "description": "GIUP GI CHO AI: Khi đã có id của nhiều comment (vd từ nhiều ticket tương tự), lấy hết trong 1 call thay vì gọi lẻ từng ticket.\n\nCACH DUNG: Body: {\"ids\": [10000, 10001, ...]}.",
+            "description": "== JIRA DOC ==\nFolder: Issue comments\nOperation: Get comments by IDs\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-comments/#api-rest-api-3-comment-list-post\n\n== GIUP GI CHO AI ==\nKhi đã có id của nhiều comment (vd từ nhiều ticket tương tự), lấy hết trong 1 call thay vì gọi lẻ từng ticket.\n\nCACH DUNG: Body: {\"ids\": [10000, 10001, ...]}.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"ids\": [\n    10000,\n    10001\n  ]\n}",
@@ -508,7 +636,7 @@
           }
         },
         {
-          "name": "Đọc changelog hàng loạt",
+          "name": "Add comment",
           "request": {
             "method": "POST",
             "header": [
@@ -522,7 +650,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/rest/api/3/changelog/bulkfetch",
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/comment",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -530,14 +658,15 @@
                 "rest",
                 "api",
                 "3",
-                "changelog",
-                "bulkfetch"
+                "issue",
+                "{{issueKey}}",
+                "comment"
               ]
             },
-            "description": "GIUP GI CHO AI: Lấy lịch sử thay đổi của nhiều ticket cùng lúc — dựng bức tranh các ticket tương tự đã đi qua những bước nào.\n\nCACH DUNG: Body: {\"issueIdsOrKeys\": [\"SCRUM-5\",\"SCRUM-6\"]}.",
+            "description": "== JIRA DOC ==\nFolder: Issue comments\nOperation: Add comment\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-comments/#api-rest-api-3-issue-issueidorkey-comment-post\n\n== GIUP GI CHO AI ==\nAI ghi kết quả phân tích + link ticket tương tự + gợi ý cách fix vào ticket.\n\nCACH DUNG: Body comment phải là ADF.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"issueIdsOrKeys\": [\n    \"{{issueKey}}\"\n  ]\n}",
+              "raw": "{\n  \"body\": {\n    \"type\": \"doc\",\n    \"version\": 1,\n    \"content\": [\n      {\n        \"type\": \"paragraph\",\n        \"content\": [\n          {\n            \"type\": \"text\",\n            \"text\": \"Phan tich tu AI: ticket tuong tu SCRUM-5 da fix bang cach tang pool size.\"\n          }\n        ]\n      }\n    ]\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -545,9 +674,242 @@
               }
             }
           }
+        }
+      ]
+    },
+    {
+      "name": "Issue attachments",
+      "item": [
+        {
+          "name": "Get attachment content",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/attachment/content/{{attachmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "attachment",
+                "content",
+                "{{attachmentId}}"
+              ]
+            },
+            "description": "== JIRA DOC ==\nFolder: Issue attachments\nOperation: Get attachment content\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-attachments/#api-rest-api-3-attachment-content-id-get\n\n== GIUP GI CHO AI ==\nĐọc log lỗi, config đính kèm — GET issue chỉ trả metadata, muốn AI đọc nội dung file phải gọi endpoint này.\n\nCACH DUNG: id từ fields.attachment[].id; response binary. Upload: POST /issue/{key}/attachments (multipart + header X-Atlassian-Token: no-check)."
+          }
         },
         {
-          "name": "Danh mục toàn bộ field",
+          "name": "Get attachment thumbnail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/attachment/thumbnail/{{attachmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "attachment",
+                "thumbnail",
+                "{{attachmentId}}"
+              ]
+            },
+            "description": "== JIRA DOC ==\nFolder: Issue attachments\nOperation: Get attachment thumbnail\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-attachments/#api-rest-api-3-attachment-thumbnail-id-get\n\n== GIUP GI CHO AI ==\nLấy bản thu nhỏ của screenshot khi không cần ảnh gốc (tiết kiệm băng thông/token vision).\n\nCACH DUNG: Kèm GET /attachment/{id}/expand/human — xem danh sách file BÊN TRONG file zip mà không cần tải về."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Issue remote links",
+      "item": [
+        {
+          "name": "Get remote issue links",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/remotelink",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "remotelink"
+              ]
+            },
+            "description": "== JIRA DOC ==\nFolder: Issue remote links\nOperation: Get remote issue links\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-remote-links/#api-rest-api-3-issue-issueidorkey-remotelink-get\n\n== GIUP GI CHO AI ==\nLink ngoài gắn vào ticket (trang Confluence, PR...) — ngữ cảnh bổ sung.\n\nCACH DUNG: Không tham số."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Issue worklogs",
+      "item": [
+        {
+          "name": "Get issue worklogs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/worklog",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "worklog"
+              ]
+            },
+            "description": "== JIRA DOC ==\nFolder: Issue worklogs\nOperation: Get issue worklogs\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-worklogs/#api-rest-api-3-issue-issueidorkey-worklog-get\n\n== GIUP GI CHO AI ==\nAi đã làm bao nhiêu giờ trên ticket — tín hiệu về độ phức tạp thực tế và người hiểu ticket nhất.\n\nCACH DUNG: Phân trang startAt/maxResults."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Issue watchers",
+      "item": [
+        {
+          "name": "Get issue watchers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/watchers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "watchers"
+              ]
+            },
+            "description": "== JIRA DOC ==\nFolder: Issue watchers\nOperation: Get issue watchers\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-watchers/#api-rest-api-3-issue-issueidorkey-watchers-get\n\n== GIUP GI CHO AI ==\nAi đang theo dõi ticket — tín hiệu mức độ quan tâm, ứng viên để hỏi thêm thông tin.\n\nCACH DUNG: Kèm GET /issue/{key}/votes — số vote (mức độ mong muốn từ người dùng)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Issue properties",
+      "item": [
+        {
+          "name": "Get issue property keys",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/properties",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "properties"
+              ]
+            },
+            "description": "== JIRA DOC ==\nFolder: Issue properties\nOperation: Get issue property keys\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-properties/#api-rest-api-3-issue-issueidorkey-properties-get\n\n== GIUP GI CHO AI ==\nĐọc lại trạng thái AI đã lưu trên ticket (đã xử lý chưa, kết quả gì) — xem mục PUT properties ở nhóm 4.\n\nCACH DUNG: GET .../properties liệt kê keys; GET .../properties/{propertyKey} đọc giá trị."
+          }
+        },
+        {
+          "name": "Set issue property",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/properties/ai-state",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "{{issueKey}}",
+                "properties",
+                "ai-state"
+              ]
+            },
+            "description": "== JIRA DOC ==\nFolder: Issue properties\nOperation: Set issue property\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-properties/#api-rest-api-3-issue-issueidorkey-properties-propertykey-put\n\n== GIUP GI CHO AI ==\nLưu 'ticket này AI xử lý chưa, kết quả gì' ngay trên ticket mà không làm bẩn field hiển thị → giải quyết webhook bắn trùng (idempotency).\n\nCACH DUNG: PUT body JSON bất kỳ; GET cùng đường dẫn để đọc lại.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"processed_at\": \"2026-06-12T15:00:00+07:00\",\n  \"action\": \"commented\",\n  \"similar\": [\n    \"SCRUM-5\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Issue fields",
+      "item": [
+        {
+          "name": "Get fields",
           "request": {
             "method": "GET",
             "header": [
@@ -568,11 +930,11 @@
                 "field"
               ]
             },
-            "description": "GIUP GI CHO AI: Bảng tra customfield_xxxxx → tên + kiểu dữ liệu. Cache 1 lần dùng mãi.\n\nCACH DUNG: Với custom field dạng select: GET /field/{fieldId}/contexts rồi GET /field/{fieldId}/context/{contextId}/option để lấy danh sách giá trị hợp lệ."
+            "description": "== JIRA DOC ==\nFolder: Issue fields\nOperation: Get fields\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-fields/#api-rest-api-3-field-get\n\n== GIUP GI CHO AI ==\nBảng tra customfield_xxxxx → tên + kiểu dữ liệu. Cache 1 lần dùng mãi.\n\nCACH DUNG: Với custom field dạng select: GET /field/{fieldId}/contexts rồi GET /field/{fieldId}/context/{contextId}/option để lấy danh sách giá trị hợp lệ."
           }
         },
         {
-          "name": "Context của một custom field",
+          "name": "Get contexts for a field",
           "request": {
             "method": "GET",
             "header": [
@@ -595,16 +957,16 @@
                 "contexts"
               ]
             },
-            "description": "GIUP GI CHO AI: Bước trung gian để lấy danh sách giá trị hợp lệ của custom field dạng select/multi-select — cần khi AI muốn set custom field.\n\nCACH DUNG: Lấy contextId ở đây rồi GET /field/{fieldId}/context/{contextId}/option. fieldId vd customfield_10020."
+            "description": "== JIRA DOC ==\nFolder: Issue fields\nOperation: Get contexts for a field\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-fields/#api-rest-api-3-field-fieldid-contexts-get\n\n== GIUP GI CHO AI ==\nBước trung gian để lấy danh sách giá trị hợp lệ của custom field dạng select/multi-select — cần khi AI muốn set custom field.\n\nCACH DUNG: Lấy contextId ở đây rồi GET /field/{fieldId}/context/{contextId}/option. fieldId vd customfield_10020."
           }
         }
       ]
     },
     {
-      "name": "3. Tìm ticket tương tự đã giải quyết",
+      "name": "Issue search",
       "item": [
         {
-          "name": "Enhanced JQL search — endpoint hiện hành",
+          "name": "Search for issues using JQL enhanced search (GET)",
           "request": {
             "method": "GET",
             "header": [
@@ -640,11 +1002,11 @@
                 }
               ]
             },
-            "description": "GIUP GI CHO AI: Trái tim của việc tìm ticket tương tự. JQL mẫu: statusCategory = Done AND (text ~ \"keywords\" OR labels in (...)). LƯU Ý: text ~ là keyword search (không semantic) và KHÔNG quét labels.\n\nCACH DUNG: Endpoint /search cũ đã khai tử. JQL phải bounded (có project=...). Phân trang bằng nextPageToken (không còn startAt). reconcileIssues=[ids] nếu cần đọc-ngay-sau-ghi."
+            "description": "== JIRA DOC ==\nFolder: Issue search\nOperation: Search for issues using JQL enhanced search (GET)\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-search/#api-rest-api-3-search-jql-get\n\n== GIUP GI CHO AI ==\nTrái tim của việc tìm ticket tương tự. JQL mẫu: statusCategory = Done AND (text ~ \"keywords\" OR labels in (...)). LƯU Ý: text ~ là keyword search (không semantic) và KHÔNG quét labels.\n\nCACH DUNG: Endpoint /search cũ đã khai tử. JQL phải bounded (có project=...). Phân trang bằng nextPageToken (không còn startAt). reconcileIssues=[ids] nếu cần đọc-ngay-sau-ghi."
           }
         },
         {
-          "name": "Enhanced JQL search — bản POST (code thật dùng bản này)",
+          "name": "Search for issues using JQL enhanced search (POST)",
           "request": {
             "method": "POST",
             "header": [
@@ -670,7 +1032,7 @@
                 "jql"
               ]
             },
-            "description": "GIUP GI CHO AI: Giống bản GET nhưng truyền JQL/fields trong body — bắt buộc khi JQL dài hoặc có ký tự đặc biệt. ai_context.py của service đang dùng đúng bản này.\n\nCACH DUNG: Body: {\"jql\": \"...\", \"fields\": [...], \"maxResults\": 50, \"nextPageToken\": \"...\"}.",
+            "description": "== JIRA DOC ==\nFolder: Issue search\nOperation: Search for issues using JQL enhanced search (POST)\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-search/#api-rest-api-3-search-jql-post\n\n== GIUP GI CHO AI ==\nGiống bản GET nhưng truyền JQL/fields trong body — bắt buộc khi JQL dài hoặc có ký tự đặc biệt. ai_context.py của service đang dùng đúng bản này.\n\nCACH DUNG: Body: {\"jql\": \"...\", \"fields\": [...], \"maxResults\": 50, \"nextPageToken\": \"...\"}.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"jql\": \"project = {{projectKey}} AND statusCategory = Done AND text ~ \\\"timeout\\\"\",\n  \"fields\": [\n    \"summary\",\n    \"status\",\n    \"resolution\",\n    \"labels\"\n  ],\n  \"maxResults\": 50\n}",
@@ -683,7 +1045,7 @@
           }
         },
         {
-          "name": "Issue picker — gợi ý nhanh theo text",
+          "name": "Get issue picker suggestions",
           "request": {
             "method": "GET",
             "header": [
@@ -711,11 +1073,11 @@
                 }
               ]
             },
-            "description": "GIUP GI CHO AI: Bước tìm ứng viên rẻ và nhanh trước khi search JQL đầy đủ. Trả 2 danh sách: lịch sử người dùng + kết quả khớp text.\n\nCACH DUNG: query = chuỗi tự do; currentJQL để giới hạn phạm vi; currentProjectId lọc theo project."
+            "description": "== JIRA DOC ==\nFolder: Issue search\nOperation: Get issue picker suggestions\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-search/#api-rest-api-3-issue-picker-get\n\n== GIUP GI CHO AI ==\nBước tìm ứng viên rẻ và nhanh trước khi search JQL đầy đủ. Trả 2 danh sách: lịch sử người dùng + kết quả khớp text.\n\nCACH DUNG: query = chuỗi tự do; currentJQL để giới hạn phạm vi; currentProjectId lọc theo project."
           }
         },
         {
-          "name": "Đếm nhanh số kết quả",
+          "name": "Count issues using JQL",
           "request": {
             "method": "POST",
             "header": [
@@ -741,7 +1103,7 @@
                 "approximate-count"
               ]
             },
-            "description": "GIUP GI CHO AI: Biết JQL trả khoảng bao nhiêu ticket trước khi fetch — quyết định có cần thu hẹp điều kiện không.\n\nCACH DUNG: Body: {\"jql\": \"...\"}. JQL phải bounded.",
+            "description": "== JIRA DOC ==\nFolder: Issue search\nOperation: Count issues using JQL\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-search/#api-rest-api-3-search-approximate-count-post\n\n== GIUP GI CHO AI ==\nBiết JQL trả khoảng bao nhiêu ticket trước khi fetch — quyết định có cần thu hẹp điều kiện không.\n\nCACH DUNG: Body: {\"jql\": \"...\"}. JQL phải bounded.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"jql\": \"project = {{projectKey}} AND statusCategory = Done\"\n}",
@@ -754,46 +1116,7 @@
           }
         },
         {
-          "name": "Validate JQL",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/rest/api/3/jql/parse",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rest",
-                "api",
-                "3",
-                "jql",
-                "parse"
-              ]
-            },
-            "description": "GIUP GI CHO AI: Nếu để AI tự sinh JQL: parse trước khi chạy, lỗi thì trả cho AI sửa — tránh request hỏng.\n\nCACH DUNG: Body: {\"queries\": [\"project = SCRUM AND ...\"]}.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"queries\": [\n    \"project = {{projectKey}} AND text ~ \\\"timeout\\\"\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Kiểm tra issue khớp JQL",
+          "name": "Check issues against JQL",
           "request": {
             "method": "POST",
             "header": [
@@ -819,7 +1142,7 @@
                 "match"
               ]
             },
-            "description": "GIUP GI CHO AI: Trả lời câu 'ticket X có thuộc diện Y không' mà không cần search lại toàn bộ.\n\nCACH DUNG: Body: {\"jqls\": [...], \"issueIds\": [...]}.",
+            "description": "== JIRA DOC ==\nFolder: Issue search\nOperation: Check issues against JQL\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-search/#api-rest-api-3-jql-match-post\n\n== GIUP GI CHO AI ==\nTrả lời câu 'ticket X có thuộc diện Y không' mà không cần search lại toàn bộ.\n\nCACH DUNG: Body: {\"jqls\": [...], \"issueIds\": [...]}.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"jqls\": [\n    \"project = {{projectKey}} AND statusCategory = Done\"\n  ],\n  \"issueIds\": [\n    10000\n  ]\n}",
@@ -830,9 +1153,53 @@
               }
             }
           }
+        }
+      ]
+    },
+    {
+      "name": "JQL",
+      "item": [
+        {
+          "name": "Parse JQL query",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/jql/parse",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "jql",
+                "parse"
+              ]
+            },
+            "description": "== JIRA DOC ==\nFolder: JQL\nOperation: Parse JQL query\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-jql/#api-rest-api-3-jql-parse-post\n\n== GIUP GI CHO AI ==\nNếu để AI tự sinh JQL: parse trước khi chạy, lỗi thì trả cho AI sửa — tránh request hỏng.\n\nCACH DUNG: Body: {\"queries\": [\"project = SCRUM AND ...\"]}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queries\": [\n    \"project = {{projectKey}} AND text ~ \\\"timeout\\\"\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
         },
         {
-          "name": "Danh mục field/operator JQL",
+          "name": "Get field reference data (GET)",
           "request": {
             "method": "GET",
             "header": [
@@ -854,98 +1221,16 @@
                 "autocompletedata"
               ]
             },
-            "description": "GIUP GI CHO AI: Đưa vào prompt làm tài liệu tham chiếu để AI sinh JQL đúng cú pháp, đúng tên field của site.\n\nCACH DUNG: Cache 1 lần."
+            "description": "== JIRA DOC ==\nFolder: JQL\nOperation: Get field reference data (GET)\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-jql/#api-rest-api-3-jql-autocompletedata-get\n\n== GIUP GI CHO AI ==\nĐưa vào prompt làm tài liệu tham chiếu để AI sinh JQL đúng cú pháp, đúng tên field của site.\n\nCACH DUNG: Cache 1 lần."
           }
         }
       ]
     },
     {
-      "name": "4. Phán đoán & hành động (AI quyết → service làm)",
+      "name": "User search",
       "item": [
         {
-          "name": "Các bước chuyển hợp lệ",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/transitions",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rest",
-                "api",
-                "3",
-                "issue",
-                "{{issueKey}}",
-                "transitions"
-              ]
-            },
-            "description": "GIUP GI CHO AI: AI chỉ được đề xuất chuyển trạng thái trong danh sách này — workflow mỗi project khác nhau, không đoán được.\n\nCACH DUNG: Lấy transition id ở đây rồi POST cùng đường dẫn để thực hiện."
-          }
-        },
-        {
-          "name": "Field nào sửa được + giá trị hợp lệ",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/editmeta",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rest",
-                "api",
-                "3",
-                "issue",
-                "{{issueKey}}",
-                "editmeta"
-              ]
-            },
-            "description": "GIUP GI CHO AI: Trước khi AI đề xuất sửa field: biết field đó có trên màn hình edit không, nhận giá trị gì — tránh đề xuất bất khả thi.\n\nCACH DUNG: Không tham số."
-          }
-        },
-        {
-          "name": "Metadata để TẠO ticket",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/rest/api/3/issue/createmeta/{{projectKey}}/issuetypes",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rest",
-                "api",
-                "3",
-                "issue",
-                "createmeta",
-                "{{projectKey}}",
-                "issuetypes"
-              ]
-            },
-            "description": "GIUP GI CHO AI: Chỉ cần nếu cho AI tạo ticket mới (vd tách bug, tạo subtask): biết project nhận những issue type nào, field nào bắt buộc khi tạo.\n\nCACH DUNG: Lấy issueTypeId ở đây rồi GET /issue/createmeta/{project}/issuetypes/{issueTypeId} để biết chi tiết field bắt buộc của từng loại."
-          }
-        },
-        {
-          "name": "Người được phép gán (đã test)",
+          "name": "Find users assignable to issues",
           "request": {
             "method": "GET",
             "header": [
@@ -974,11 +1259,16 @@
                 }
               ]
             },
-            "description": "GIUP GI CHO AI: AI đề xuất assignee phải nằm trong danh sách này, nếu không PUT assignee sẽ 400.\n\nCACH DUNG: Trả accountId — Jira Cloud chỉ nhận accountId, không nhận username/email."
+            "description": "== JIRA DOC ==\nFolder: User search\nOperation: Find users assignable to issues\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-user-search/#api-rest-api-3-user-assignable-search-get\n\n== GIUP GI CHO AI ==\nAI đề xuất assignee phải nằm trong danh sách này, nếu không PUT assignee sẽ 400.\n\nCACH DUNG: Trả accountId — Jira Cloud chỉ nhận accountId, không nhận username/email."
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Permissions",
+      "item": [
         {
-          "name": "Quyền của tài khoản bot (đã test)",
+          "name": "Get my permissions",
           "request": {
             "method": "GET",
             "header": [
@@ -1009,11 +1299,16 @@
                 }
               ]
             },
-            "description": "GIUP GI CHO AI: Service tự kiểm tra đủ quyền làm hành động AI đề xuất không, trước khi thử và thất bại.\n\nCACH DUNG: permissions = danh sách permission key cách nhau dấu phẩy."
+            "description": "== JIRA DOC ==\nFolder: Permissions\nOperation: Get my permissions\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-permissions/#api-rest-api-3-mypermissions-get\n\n== GIUP GI CHO AI ==\nService tự kiểm tra đủ quyền làm hành động AI đề xuất không, trước khi thử và thất bại.\n\nCACH DUNG: permissions = danh sách permission key cách nhau dấu phẩy."
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Project components",
+      "item": [
         {
-          "name": "Components + lead",
+          "name": "Get project components",
           "request": {
             "method": "GET",
             "header": [
@@ -1036,11 +1331,16 @@
                 "components"
               ]
             },
-            "description": "GIUP GI CHO AI: Mỗi component có 'lead' (người phụ trách) — nguồn cho quy ước 'bug component X → giao lead X'.\n\nCACH DUNG: Kèm GET /component/{id}/relatedIssueCounts — component nào đang nhiều bug."
+            "description": "== JIRA DOC ==\nFolder: Project components\nOperation: Get project components\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-project-components/#api-rest-api-3-project-projectidorkey-components-get\n\n== GIUP GI CHO AI ==\nMỗi component có 'lead' (người phụ trách) — nguồn cho quy ước 'bug component X → giao lead X'.\n\nCACH DUNG: Kèm GET /component/{id}/relatedIssueCounts — component nào đang nhiều bug."
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Project roles",
+      "item": [
         {
-          "name": "Vai trò trong project",
+          "name": "Get project roles for project",
           "request": {
             "method": "GET",
             "header": [
@@ -1063,11 +1363,16 @@
                 "role"
               ]
             },
-            "description": "GIUP GI CHO AI: Ai là Developer/Admin của project — gợi ý assignee theo vai trò.\n\nCACH DUNG: Trả URL từng role, gọi tiếp để lấy thành viên."
+            "description": "== JIRA DOC ==\nFolder: Project roles\nOperation: Get project roles for project\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-project-roles/#api-rest-api-3-project-projectidorkey-role-get\n\n== GIUP GI CHO AI ==\nAi là Developer/Admin của project — gợi ý assignee theo vai trò.\n\nCACH DUNG: Trả URL từng role, gọi tiếp để lấy thành viên."
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Group and user picker",
+      "item": [
         {
-          "name": "Tìm người theo tên",
+          "name": "Find users and groups",
           "request": {
             "method": "GET",
             "header": [
@@ -1094,210 +1399,16 @@
                 }
               ]
             },
-            "description": "GIUP GI CHO AI: Resolve tên người được nhắc trong comment ('giao cho anh Nam') → accountId.\n\nCACH DUNG: query = tên gần đúng."
+            "description": "== JIRA DOC ==\nFolder: Group and user picker\nOperation: Find users and groups\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-group-and-user-picker/#api-rest-api-3-groupuserpicker-get\n\n== GIUP GI CHO AI ==\nResolve tên người được nhắc trong comment ('giao cho anh Nam') → accountId.\n\nCACH DUNG: query = tên gần đúng."
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Issue links",
+      "item": [
         {
-          "name": "Ghi comment (hành động an toàn nhất — nên là mặc định)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/comment",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rest",
-                "api",
-                "3",
-                "issue",
-                "{{issueKey}}",
-                "comment"
-              ]
-            },
-            "description": "GIUP GI CHO AI: AI ghi kết quả phân tích + link ticket tương tự + gợi ý cách fix vào ticket.\n\nCACH DUNG: Body comment phải là ADF.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"body\": {\n    \"type\": \"doc\",\n    \"version\": 1,\n    \"content\": [\n      {\n        \"type\": \"paragraph\",\n        \"content\": [\n          {\n            \"type\": \"text\",\n            \"text\": \"Phan tich tu AI: ticket tuong tu SCRUM-5 da fix bang cach tang pool size.\"\n          }\n        ]\n      }\n    ]\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Gán người xử lý",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/assignee",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rest",
-                "api",
-                "3",
-                "issue",
-                "{{issueKey}}",
-                "assignee"
-              ]
-            },
-            "description": "GIUP GI CHO AI: Thực thi đề xuất assignee của AI.\n\nCACH DUNG: Body: {\"accountId\": \"...\"}. Kiểm tra assignable trước (xem trên).",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"accountId\": \"{{accountId}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Chuyển trạng thái",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/transitions",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rest",
-                "api",
-                "3",
-                "issue",
-                "{{issueKey}}",
-                "transitions"
-              ]
-            },
-            "description": "GIUP GI CHO AI: Thực thi đề xuất chuyển workflow của AI.\n\nCACH DUNG: Body: {\"transition\": {\"id\": \"41\"}}. Response 204 RỖNG — client phải xử lý body rỗng (đã vấp khi test).",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"transition\": {\n    \"id\": \"41\"\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Sửa field (label, priority, component...)",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rest",
-                "api",
-                "3",
-                "issue",
-                "{{issueKey}}"
-              ]
-            },
-            "description": "GIUP GI CHO AI: Thực thi đề xuất chỉnh field của AI.\n\nCACH DUNG: Thêm ?notifyUsers=false để không spam email watcher. Body theo editmeta.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"fields\": {\n    \"labels\": [\n      \"ai-reviewed\"\n    ]\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Gửi thông báo đích danh",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/notify",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rest",
-                "api",
-                "3",
-                "issue",
-                "{{issueKey}}",
-                "notify"
-              ]
-            },
-            "description": "GIUP GI CHO AI: Khi AI xác định cần người cụ thể chú ý (vd nghi trùng ticket đang mở của họ).\n\nCACH DUNG: Body: {\"subject\", \"textBody\", \"to\": {\"users\": [...]}}.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"subject\": \"Ticket can chu y\",\n  \"textBody\": \"AI phat hien ticket nay nghi trung voi ticket cua ban.\",\n  \"to\": {\n    \"users\": [\n      {\n        \"accountId\": \"{{accountId}}\"\n      }\n    ]\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Tạo link giữa 2 ticket",
+          "name": "Create issue link",
           "request": {
             "method": "POST",
             "header": [
@@ -1322,51 +1433,10 @@
                 "issueLink"
               ]
             },
-            "description": "GIUP GI CHO AI: AI phát hiện trùng/liên quan → tạo link 'duplicates'/'relates to' để người đọc thấy ngay.\n\nCACH DUNG: Body: {\"type\": {\"name\": \"Duplicate\"}, \"inwardIssue\": {\"key\"}, \"outwardIssue\": {\"key\"}}. Danh sách loại link: GET /issueLinkType.",
+            "description": "== JIRA DOC ==\nFolder: Issue links\nOperation: Create issue link\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-links/#api-rest-api-3-issuelink-post\n\n== GIUP GI CHO AI ==\nAI phát hiện trùng/liên quan → tạo link 'duplicates'/'relates to' để người đọc thấy ngay.\n\nCACH DUNG: Body: {\"type\": {\"name\": \"Duplicate\"}, \"inwardIssue\": {\"key\"}, \"outwardIssue\": {\"key\"}}. Danh sách loại link: GET /issueLinkType.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"type\": {\n    \"name\": \"Duplicate\"\n  },\n  \"inwardIssue\": {\n    \"key\": \"{{issueKey}}\"\n  },\n  \"outwardIssue\": {\n    \"key\": \"SCRUM-5\"\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Issue property — bộ nhớ ẩn của AI trên ticket",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/rest/api/3/issue/{{issueKey}}/properties/ai-state",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rest",
-                "api",
-                "3",
-                "issue",
-                "{{issueKey}}",
-                "properties",
-                "ai-state"
-              ]
-            },
-            "description": "GIUP GI CHO AI: Lưu 'ticket này AI xử lý chưa, kết quả gì' ngay trên ticket mà không làm bẩn field hiển thị → giải quyết webhook bắn trùng (idempotency).\n\nCACH DUNG: PUT body JSON bất kỳ; GET cùng đường dẫn để đọc lại.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"processed_at\": \"2026-06-12T15:00:00+07:00\",\n  \"action\": \"commented\",\n  \"similar\": [\n    \"SCRUM-5\"\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1378,10 +1448,10 @@
       ]
     },
     {
-      "name": "5. Danh mục ngữ cảnh (cache 1 lần khi khởi động)",
+      "name": "Myself",
       "item": [
         {
-          "name": "Tài khoản đang đăng nhập",
+          "name": "Get current user",
           "request": {
             "method": "GET",
             "header": [
@@ -1402,11 +1472,16 @@
                 "myself"
               ]
             },
-            "description": "GIUP GI CHO AI: Smoke test xác thực; lấy accountId của bot để lọc comment do chính bot viết (tránh AI tự đọc lại output của mình)."
+            "description": "== JIRA DOC ==\nFolder: Myself\nOperation: Get current user\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-myself/#api-rest-api-3-myself-get\n\n== GIUP GI CHO AI ==\nSmoke test xác thực; lấy accountId của bot để lọc comment do chính bot viết (tránh AI tự đọc lại output của mình)."
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Server info",
+      "item": [
         {
-          "name": "Thông tin site",
+          "name": "Get Jira instance info",
           "request": {
             "method": "GET",
             "header": [
@@ -1427,11 +1502,16 @@
                 "serverInfo"
               ]
             },
-            "description": "GIUP GI CHO AI: Kiểm tra kết nối + xác nhận deploymentType=Cloud (API v3 chỉ có trên Cloud).\n\nCACH DUNG: Gọi được không cần đăng nhập."
+            "description": "== JIRA DOC ==\nFolder: Server info\nOperation: Get Jira instance info\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-server-info/#api-rest-api-3-serverinfo-get\n\n== GIUP GI CHO AI ==\nKiểm tra kết nối + xác nhận deploymentType=Cloud (API v3 chỉ có trên Cloud).\n\nCACH DUNG: Gọi được không cần đăng nhập."
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Projects",
+      "item": [
         {
-          "name": "Get project — chi tiết 1 project",
+          "name": "Get project",
           "request": {
             "method": "GET",
             "header": [
@@ -1453,11 +1533,11 @@
                 "{{projectKey}}"
               ]
             },
-            "description": "GIUP GI CHO AI: Lấy projectId (id số, cần cho vài API khác), lead, mô tả, loại project (software/JSM) làm ngữ cảnh.\n\nCACH DUNG: Nhận projectKey hoặc projectId."
+            "description": "== JIRA DOC ==\nFolder: Projects\nOperation: Get project\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-projects/#api-rest-api-3-project-projectidorkey-get\n\n== GIUP GI CHO AI ==\nLấy projectId (id số, cần cho vài API khác), lead, mô tả, loại project (software/JSM) làm ngữ cảnh.\n\nCACH DUNG: Nhận projectKey hoặc projectId."
           }
         },
         {
-          "name": "Get projects — danh sách phân trang",
+          "name": "Get projects paginated",
           "request": {
             "method": "GET",
             "header": [
@@ -1479,61 +1559,11 @@
                 "search"
               ]
             },
-            "description": "GIUP GI CHO AI: Liệt kê các project service được phép xử lý — hữu ích khi mở rộng ra nhiều project.\n\nCACH DUNG: Phân trang startAt/maxResults; query để lọc theo tên/key."
+            "description": "== JIRA DOC ==\nFolder: Projects\nOperation: Get projects paginated\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-projects/#api-rest-api-3-project-search-get\n\n== GIUP GI CHO AI ==\nLiệt kê các project service được phép xử lý — hữu ích khi mở rộng ra nhiều project.\n\nCACH DUNG: Phân trang startAt/maxResults; query để lọc theo tên/key."
           }
         },
         {
-          "name": "Các mức priority",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/rest/api/3/priority",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rest",
-                "api",
-                "3",
-                "priority"
-              ]
-            },
-            "description": "GIUP GI CHO AI: AI đề xuất đổi priority phải dùng giá trị trong này."
-          }
-        },
-        {
-          "name": "Các loại resolution",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/rest/api/3/resolution",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "rest",
-                "api",
-                "3",
-                "resolution"
-              ]
-            },
-            "description": "GIUP GI CHO AI: Hiểu 'Fixed' khác 'Won't Fix' khi đọc ticket đã đóng."
-          }
-        },
-        {
-          "name": "Workflow theo issue type của project",
+          "name": "Get all statuses for project",
           "request": {
             "method": "GET",
             "header": [
@@ -1556,11 +1586,76 @@
                 "statuses"
               ]
             },
-            "description": "GIUP GI CHO AI: Bug và Task có thể đi workflow khác nhau — AI cần biết trước khi đề xuất.\n\nCACH DUNG: Toàn site: GET /statuses/search; nhóm trạng thái: GET /statuscategory."
+            "description": "== JIRA DOC ==\nFolder: Projects\nOperation: Get all statuses for project\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-projects/#api-rest-api-3-project-projectidorkey-statuses-get\n\n== GIUP GI CHO AI ==\nBug và Task có thể đi workflow khác nhau — AI cần biết trước khi đề xuất.\n\nCACH DUNG: Toàn site: GET /statuses/search; nhóm trạng thái: GET /statuscategory."
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Issue priorities",
+      "item": [
         {
-          "name": "Toàn bộ labels",
+          "name": "Get priorities",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/priority",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "priority"
+              ]
+            },
+            "description": "== JIRA DOC ==\nFolder: Issue priorities\nOperation: Get priorities\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-priorities/#api-rest-api-3-priority-get\n\n== GIUP GI CHO AI ==\nAI đề xuất đổi priority phải dùng giá trị trong này."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Issue resolutions",
+      "item": [
+        {
+          "name": "Get resolutions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/resolution",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "resolution"
+              ]
+            },
+            "description": "== JIRA DOC ==\nFolder: Issue resolutions\nOperation: Get resolutions\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-resolutions/#api-rest-api-3-resolution-get\n\n== GIUP GI CHO AI ==\nHiểu 'Fixed' khác 'Won't Fix' khi đọc ticket đã đóng."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Labels",
+      "item": [
+        {
+          "name": "Get all labels",
           "request": {
             "method": "GET",
             "header": [
@@ -1581,11 +1676,16 @@
                 "label"
               ]
             },
-            "description": "GIUP GI CHO AI: AI gắn label nên chọn label có sẵn thay vì sinh mới tùy tiện."
+            "description": "== JIRA DOC ==\nFolder: Labels\nOperation: Get all labels\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-labels/#api-rest-api-3-label-get\n\n== GIUP GI CHO AI ==\nAI gắn label nên chọn label có sẵn thay vì sinh mới tùy tiện."
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Project versions",
+      "item": [
         {
-          "name": "Versions của project",
+          "name": "Get project versions",
           "request": {
             "method": "GET",
             "header": [
@@ -1608,11 +1708,16 @@
                 "versions"
               ]
             },
-            "description": "GIUP GI CHO AI: Ngữ cảnh affectedVersion/fixVersion khi AI đề xuất gắn bản phát hành.\n\nCACH DUNG: Kèm GET /version/{id}/unresolvedIssueCount — version nào còn nhiều bug."
+            "description": "== JIRA DOC ==\nFolder: Project versions\nOperation: Get project versions\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-project-versions/#api-rest-api-3-project-projectidorkey-versions-get\n\n== GIUP GI CHO AI ==\nNgữ cảnh affectedVersion/fixVersion khi AI đề xuất gắn bản phát hành.\n\nCACH DUNG: Kèm GET /version/{id}/unresolvedIssueCount — version nào còn nhiều bug."
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Issue types",
+      "item": [
         {
-          "name": "Issue types của project",
+          "name": "Get issue types for project",
           "request": {
             "method": "GET",
             "header": [
@@ -1640,16 +1745,16 @@
                 }
               ]
             },
-            "description": "GIUP GI CHO AI: AI phân loại ticket (Bug/Task/Story) theo đúng bộ loại của project.\n\nCACH DUNG: projectId là id số (lấy từ GET /project/{key})."
+            "description": "== JIRA DOC ==\nFolder: Issue types\nOperation: Get issue types for project\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-types/#api-rest-api-3-issuetype-project-get\n\n== GIUP GI CHO AI ==\nAI phân loại ticket (Bug/Task/Story) theo đúng bộ loại của project.\n\nCACH DUNG: projectId là id số (lấy từ GET /project/{key})."
           }
         }
       ]
     },
     {
-      "name": "6. Hai họ API ngoài Platform (cùng site, cùng auth, tài liệu riêng)",
+      "name": "Agile: Board",
       "item": [
         {
-          "name": "Agile API — boards",
+          "name": "Get all boards",
           "request": {
             "method": "GET",
             "header": [
@@ -1670,11 +1775,11 @@
                 "board"
               ]
             },
-            "description": "GIUP GI CHO AI: Ngữ cảnh Scrum/Kanban: ticket thuộc board nào. Platform API chỉ lộ sprint qua customfield.\n\nCACH DUNG: Họ /rest/agile/1.0/: board/{id}/sprint (sprint active), sprint/{id}/issue, epic... Tài liệu: developer.atlassian.com → Jira Software Cloud REST API."
+            "description": "== JIRA DOC ==\nFolder: Agile: Board\nOperation: Get all boards\nTai lieu: https://developer.atlassian.com/cloud/jira/software/rest/api-group-board/#api-rest-agile-1-0-board-get\n\n== GIUP GI CHO AI ==\nNgữ cảnh Scrum/Kanban: ticket thuộc board nào. Platform API chỉ lộ sprint qua customfield.\n\nCACH DUNG: Họ /rest/agile/1.0/: board/{id}/sprint (sprint active), sprint/{id}/issue, epic... Tài liệu: developer.atlassian.com → Jira Software Cloud REST API."
           }
         },
         {
-          "name": "Agile API — sprint đang chạy",
+          "name": "Get all sprints (by board)",
           "request": {
             "method": "GET",
             "header": [
@@ -1703,11 +1808,16 @@
                 }
               ]
             },
-            "description": "GIUP GI CHO AI: Ticket mới có thuộc sprint hiện tại không → mức độ khẩn cấp khác nhau.\n\nCACH DUNG: boardId từ GET /rest/agile/1.0/board."
+            "description": "== JIRA DOC ==\nFolder: Agile: Board\nOperation: Get all sprints (by board)\nTai lieu: https://developer.atlassian.com/cloud/jira/software/rest/api-group-board/#api-rest-agile-1-0-board-boardid-sprint-get\n\n== GIUP GI CHO AI ==\nTicket mới có thuộc sprint hiện tại không → mức độ khẩn cấp khác nhau.\n\nCACH DUNG: boardId từ GET /rest/agile/1.0/board."
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Service Desk: Request",
+      "item": [
         {
-          "name": "JSM API — support request",
+          "name": "Get customer request",
           "request": {
             "method": "GET",
             "header": [
@@ -1728,7 +1838,7 @@
                 "{{issueKey}}"
               ]
             },
-            "description": "GIUP GI CHO AI: CHỈ cần khi ticket là support request của khách hàng (project JSM): SLA, request type, comment public/internal (cờ jsdPublic).\n\nCACH DUNG: Site phải bật Jira Service Management. Với ticket software thuần thì bỏ qua nhóm này."
+            "description": "== JIRA DOC ==\nFolder: Service Desk: Request\nOperation: Get customer request\nTai lieu: https://developer.atlassian.com/cloud/jira/service-desk/rest/api-group-request/#api-rest-servicedeskapi-request-issueidorkey-get\n\n== GIUP GI CHO AI ==\nCHỈ cần khi ticket là support request của khách hàng (project JSM): SLA, request type, comment public/internal (cờ jsdPublic).\n\nCACH DUNG: Site phải bật Jira Service Management. Với ticket software thuần thì bỏ qua nhóm này."
           }
         }
       ]

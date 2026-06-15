@@ -26,10 +26,18 @@ Nội dung 2 tab sau nằm trong `catalog_data.py` — bổ sung/sửa trực ti
 `Jira_AI.postman_collection.json` — 45 request khớp 100% danh mục trên web
 (được sinh tự động từ `catalog_data.py` bằng `python generate_postman.py`).
 
+**Folder và tên request đặt theo tài liệu chính thống Jira** (tag + operation summary của
+Atlassian) — vd folder "Issue comments" chứa "Get comments", "Add comment"... giống hệt
+developer.atlassian.com, để khách đối chiếu trực tiếp API nào ứng với API nào trên doc.
+Mỗi request có khối mô tả gồm: **JIRA DOC** (folder, operation, link tài liệu) + **GIÚP GÌ CHO AI**.
+
 Cách dùng: Postman → **Import** → kéo file vào → mở collection → tab **Variables** →
 điền `apiToken` (tạo tại id.atlassian.com → Security → API tokens), sửa `baseUrl`/`username`/
 `issueKey` nếu cần → mở request bất kỳ → **Send**. Auth đã cấu hình sẵn ở cấp collection;
-13 API ghi (POST/PUT) có body mẫu sẵn; mô tả mỗi request ghi rõ API đó **giúp gì cho AI**.
+API ghi (POST/PUT) có body mẫu sẵn.
+
+> Collection được sinh từ `catalog_data.py` + tra metadata trong `../Full_APIs/swagger-jira-v3.json`
+> bằng `python generate_postman.py`. Để regenerate cần có thư mục `Full_APIs` cạnh repo.
 
 ## Chạy trong 5 phút
 

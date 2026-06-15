@@ -83,6 +83,78 @@ BODIES = {
 }
 
 
+import re
+
+# ===== Tra cuu metadata chinh thong (tag = ten folder, summary = ten request) =====
+SWAGGER_CANDIDATES = [
+    Path(__file__).parent.parent / "Full_APIs" / "swagger-jira-v3.json",
+    Path(__file__).parent / "swagger-jira-v3.json",
+]
+
+
+def _canon(p):
+    return re.sub(r"\{[^}]+\}", "{}", p.split("?")[0])
+
+
+def load_official():
+    """(method, canon_path) -> (tag, summary, official_path) tu swagger Atlassian."""
+    for sw_path in SWAGGER_CANDIDATES:
+        if sw_path.exists():
+            sw = json.loads(sw_path.read_text(encoding="utf-8"))
+            out = {}
+            for path, ops in sw["paths"].items():
+                for m, op in ops.items():
+                    if m not in ("get", "post", "put", "delete"):
+                        continue
+                    out[(m.upper(), _canon(path))] = (
+                        (op.get("tags") or ["?"])[0], op.get("summary", ""), path)
+            return out
+    print("  (canh bao) khong tim thay swagger -> dung ten trong catalog")
+    return {}
+
+
+OFFICIAL = load_official()
+
+# Map tay 6 API ngoai swagger Platform: (method, canon_path) -> (tag, summary, doc_url)
+MANUAL = {
+    ("POST", "/rest/webhooks/1.0/webhook"): (
+        "Webhooks (legacy admin)", "Register webhook",
+        "https://developer.atlassian.com/cloud/jira/platform/webhooks/#registering-a-webhook-using-the-jira-rest-api"),
+    ("GET", "/rest/webhooks/1.0/webhook"): (
+        "Webhooks (legacy admin)", "Get registered webhooks",
+        "https://developer.atlassian.com/cloud/jira/platform/webhooks/"),
+    ("PUT", "/rest/api/3/issue/{}/properties/ai-state"): (
+        "Issue properties", "Set issue property",
+        "https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-properties/#api-rest-api-3-issue-issueidorkey-properties-propertykey-put"),
+    ("GET", "/rest/agile/1.0/board"): (
+        "Agile: Board", "Get all boards",
+        "https://developer.atlassian.com/cloud/jira/software/rest/api-group-board/#api-rest-agile-1-0-board-get"),
+    ("GET", "/rest/agile/1.0/board/{}/sprint"): (
+        "Agile: Board", "Get all sprints (by board)",
+        "https://developer.atlassian.com/cloud/jira/software/rest/api-group-board/#api-rest-agile-1-0-board-boardid-sprint-get"),
+    ("GET", "/rest/servicedeskapi/request/{}"): (
+        "Service Desk: Request", "Get customer request",
+        "https://developer.atlassian.com/cloud/jira/service-desk/rest/api-group-request/#api-rest-servicedeskapi-request-issueidorkey-get"),
+}
+
+
+def doc_url(tag, official_path, method):
+    slug = tag.lower().replace(" ", "-")
+    anchor = "api-" + official_path.lower().replace("{", "").replace("}", "").strip("/").replace("/", "-") + "-" + method.lower()
+    return f"https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-{slug}/#{anchor}"
+
+
+def resolve_meta(item):
+    """Tra ve (tag, summary, doc_url) chinh thong cho 1 catalog item."""
+    key = (item["method"], _canon(item["path"]))
+    if key in OFFICIAL:
+        tag, summ, official_path = OFFICIAL[key]
+        return tag, summ, doc_url(tag, official_path, item["method"])
+    if key in MANUAL:
+        return MANUAL[key]
+    return "Khac", item["name"], ""  # fallback
+
+
 def to_postman_url(path_tpl):
     """'/rest/api/3/issue/{key}?expand=...' -> postman url object voi bien."""
     for ph, var in PLACEHOLDERS.items():
@@ -101,30 +173,50 @@ def to_postman_url(path_tpl):
 
 def build_request(item):
     bare_path = item["path"].split("?")[0]
+    tag, summ, doc = resolve_meta(item)
+    # Mo ta: khoi chinh thong (de doi chieu tai lieu Jira) + khoi giup gi cho AI
+    desc = f"== JIRA DOC ==\nFolder: {tag}\nOperation: {summ}"
+    if doc:
+        desc += f"\nTai lieu: {doc}"
+    desc += f"\n\n== GIUP GI CHO AI ==\n{item['ai']}"
+    if item.get("how"):
+        desc += f"\n\nCACH DUNG: {item['how']}"
     req = {
         "method": item["method"],
         "header": [{"key": "Accept", "value": "application/json"}],
         "url": to_postman_url(item["path"]),
-        "description": f"GIUP GI CHO AI: {item['ai']}" + (f"\n\nCACH DUNG: {item['how']}" if item.get("how") else ""),
+        "description": desc,
     }
     body = BODIES.get((item["method"], bare_path))
     if body is not None:
         req["header"].append({"key": "Content-Type", "value": "application/json"})
         req["body"] = {"mode": "raw", "raw": json.dumps(body, indent=2, ensure_ascii=False),
                        "options": {"raw": {"language": "json"}}}
-    return {"name": f"{item['name']}", "request": req}
+    # Ten request = ten operation chinh thong cua Jira (de khop doc)
+    return {"name": summ or item["name"], "request": req}, tag
 
+
+# Gom request vao folder theo TAG chinh thong, giu thu tu xuat hien
+folders = {}
+order = []
+for g in CATALOG:
+    for item in g["items"]:
+        entry, tag = build_request(item)
+        if tag not in folders:
+            folders[tag] = []
+            order.append(tag)
+        folders[tag].append(entry)
 
 collection = {
     "info": {
-        "name": "Jira API cho AI - 45 endpoints (sinh tu catalog_data.py)",
+        "name": "Jira API cho AI (52 endpoints, folder & ten theo Jira doc)",
         "description": (
             "Danh muc API phuc vu flow: webhook -> AI doc ticket -> tim ticket tuong tu -> phan doan.\n"
-            "Khop 100% voi tab 'Danh muc API' tren web demo.\n\n"
-            "CACH DUNG: vao tab Variables cua collection, dien apiToken "
-            "(tao tai id.atlassian.com/manage-profile/security/api-tokens), "
-            "sua baseUrl/username/issueKey neu can -> Send.\n"
-            "Mo ta moi request ghi ro API do GIUP GI CHO AI."
+            "Folder va ten request DAT THEO tai lieu chinh thong Jira (tag + operation summary) "
+            "de doi chieu truc tiep voi developer.atlassian.com. Moi request co link tai lieu "
+            "trong phan Description, kem ghi chu 'GIUP GI CHO AI'.\n\n"
+            "CACH DUNG: tab Variables -> dien apiToken "
+            "(id.atlassian.com/manage-profile/security/api-tokens), sua baseUrl/username/issueKey -> Send."
         ),
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     },
@@ -144,12 +236,9 @@ collection = {
         {"key": "fieldId", "value": "customfield_10020"},
         {"key": "accountId", "value": ""},
     ],
-    "item": [
-        {"name": g["group"], "item": [build_request(i) for i in g["items"]]}
-        for g in CATALOG
-    ],
+    "item": [{"name": tag, "item": folders[tag]} for tag in order],
 }
 
 OUT.write_text(json.dumps(collection, indent=2, ensure_ascii=False), encoding="utf-8")
-n = sum(len(g["item"]) for g in collection["item"])
-print(f"Da sinh {OUT.name}: {len(collection['item'])} folder, {n} request")
+n = sum(len(f["item"]) for f in collection["item"])
+print(f"Da sinh {OUT.name}: {len(collection['item'])} folder (theo Jira doc), {n} request")
