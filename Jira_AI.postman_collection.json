@@ -53,6 +53,10 @@
       "value": "10000"
     },
     {
+      "key": "fieldId",
+      "value": "customfield_10020"
+    },
+    {
       "key": "accountId",
       "value": ""
     }
@@ -465,6 +469,84 @@
           }
         },
         {
+          "name": "Đọc comment hàng loạt theo ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/comment/list",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "comment",
+                "list"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Khi đã có id của nhiều comment (vd từ nhiều ticket tương tự), lấy hết trong 1 call thay vì gọi lẻ từng ticket.\n\nCACH DUNG: Body: {\"ids\": [10000, 10001, ...]}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\n    10000,\n    10001\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Đọc changelog hàng loạt",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/changelog/bulkfetch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "changelog",
+                "bulkfetch"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Lấy lịch sử thay đổi của nhiều ticket cùng lúc — dựng bức tranh các ticket tương tự đã đi qua những bước nào.\n\nCACH DUNG: Body: {\"issueIdsOrKeys\": [\"SCRUM-5\",\"SCRUM-6\"]}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"issueIdsOrKeys\": [\n    \"{{issueKey}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
           "name": "Danh mục toàn bộ field",
           "request": {
             "method": "GET",
@@ -487,6 +569,33 @@
               ]
             },
             "description": "GIUP GI CHO AI: Bảng tra customfield_xxxxx → tên + kiểu dữ liệu. Cache 1 lần dùng mãi.\n\nCACH DUNG: Với custom field dạng select: GET /field/{fieldId}/contexts rồi GET /field/{fieldId}/context/{contextId}/option để lấy danh sách giá trị hợp lệ."
+          }
+        },
+        {
+          "name": "Context của một custom field",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/field/{{fieldId}}/contexts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "field",
+                "{{fieldId}}",
+                "contexts"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Bước trung gian để lấy danh sách giá trị hợp lệ của custom field dạng select/multi-select — cần khi AI muốn set custom field.\n\nCACH DUNG: Lấy contextId ở đây rồi GET /field/{fieldId}/context/{contextId}/option. fieldId vd customfield_10020."
           }
         }
       ]
@@ -532,6 +641,45 @@
               ]
             },
             "description": "GIUP GI CHO AI: Trái tim của việc tìm ticket tương tự. JQL mẫu: statusCategory = Done AND (text ~ \"keywords\" OR labels in (...)). LƯU Ý: text ~ là keyword search (không semantic) và KHÔNG quét labels.\n\nCACH DUNG: Endpoint /search cũ đã khai tử. JQL phải bounded (có project=...). Phân trang bằng nextPageToken (không còn startAt). reconcileIssues=[ids] nếu cần đọc-ngay-sau-ghi."
+          }
+        },
+        {
+          "name": "Enhanced JQL search — bản POST (code thật dùng bản này)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/search/jql",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "search",
+                "jql"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Giống bản GET nhưng truyền JQL/fields trong body — bắt buộc khi JQL dài hoặc có ký tự đặc biệt. ai_context.py của service đang dùng đúng bản này.\n\nCACH DUNG: Body: {\"jql\": \"...\", \"fields\": [...], \"maxResults\": 50, \"nextPageToken\": \"...\"}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jql\": \"project = {{projectKey}} AND statusCategory = Done AND text ~ \\\"timeout\\\"\",\n  \"fields\": [\n    \"summary\",\n    \"status\",\n    \"resolution\",\n    \"labels\"\n  ],\n  \"maxResults\": 50\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         },
         {
@@ -766,6 +914,34 @@
               ]
             },
             "description": "GIUP GI CHO AI: Trước khi AI đề xuất sửa field: biết field đó có trên màn hình edit không, nhận giá trị gì — tránh đề xuất bất khả thi.\n\nCACH DUNG: Không tham số."
+          }
+        },
+        {
+          "name": "Metadata để TẠO ticket",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/issue/createmeta/{{projectKey}}/issuetypes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "issue",
+                "createmeta",
+                "{{projectKey}}",
+                "issuetypes"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Chỉ cần nếu cho AI tạo ticket mới (vd tách bug, tạo subtask): biết project nhận những issue type nào, field nào bắt buộc khi tạo.\n\nCACH DUNG: Lấy issueTypeId ở đây rồi GET /issue/createmeta/{project}/issuetypes/{issueTypeId} để biết chi tiết field bắt buộc của từng loại."
           }
         },
         {
@@ -1252,6 +1428,58 @@
               ]
             },
             "description": "GIUP GI CHO AI: Kiểm tra kết nối + xác nhận deploymentType=Cloud (API v3 chỉ có trên Cloud).\n\nCACH DUNG: Gọi được không cần đăng nhập."
+          }
+        },
+        {
+          "name": "Get project — chi tiết 1 project",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/project/{{projectKey}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "project",
+                "{{projectKey}}"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Lấy projectId (id số, cần cho vài API khác), lead, mô tả, loại project (software/JSM) làm ngữ cảnh.\n\nCACH DUNG: Nhận projectKey hoặc projectId."
+          }
+        },
+        {
+          "name": "Get projects — danh sách phân trang",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rest/api/3/project/search",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rest",
+                "api",
+                "3",
+                "project",
+                "search"
+              ]
+            },
+            "description": "GIUP GI CHO AI: Liệt kê các project service được phép xử lý — hữu ích khi mở rộng ra nhiều project.\n\nCACH DUNG: Phân trang startAt/maxResults; query để lọc theo tên/key."
           }
         },
         {

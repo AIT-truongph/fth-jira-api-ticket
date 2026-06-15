@@ -18,6 +18,7 @@ PLACEHOLDERS = {
     "{projectId}": "{{projectId}}",
     "{boardId}": "{{boardId}}",
     "{id}": "{{attachmentId}}",
+    "{fieldId}": "{{fieldId}}",
 }
 
 # Body mau cho cac API ghi (de goi duoc ngay sau khi import)
@@ -46,6 +47,15 @@ BODIES = {
     ("POST", "/rest/api/3/jql/match"): {
         "jqls": ["project = {{projectKey}} AND statusCategory = Done"],
         "issueIds": [10000],
+    },
+    ("POST", "/rest/api/3/search/jql"): {
+        "jql": 'project = {{projectKey}} AND statusCategory = Done AND text ~ "timeout"',
+        "fields": ["summary", "status", "resolution", "labels"],
+        "maxResults": 50,
+    },
+    ("POST", "/rest/api/3/comment/list"): {"ids": [10000, 10001]},
+    ("POST", "/rest/api/3/changelog/bulkfetch"): {
+        "issueIdsOrKeys": ["{{issueKey}}"],
     },
     ("POST", "/rest/api/3/issue/{key}/comment"): {
         "body": {"type": "doc", "version": 1, "content": [
@@ -131,6 +141,7 @@ collection = {
         {"key": "projectId", "value": "10000"},
         {"key": "boardId", "value": "1"},
         {"key": "attachmentId", "value": "10000"},
+        {"key": "fieldId", "value": "customfield_10020"},
         {"key": "accountId", "value": ""},
     ],
     "item": [
