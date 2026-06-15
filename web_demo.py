@@ -145,6 +145,25 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    from tunnel import start_tunnel, stop_tunnel, update_webhook
+
+    # 1) Mo HTTP server o thread nen truoc, de tunnel co cho de chuyen tiep ve.
+    server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
     print(f"Web demo: http://localhost:{PORT}")
-    print(f"Webhook endpoint: POST /jira-webhook (tunnel tro vao day)")
-    ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
+
+    # 2) Tu dong chay tunnel + cap nhat webhook Jira tro ve URL moi.
+    try:
+        public_url = start_tunnel(PORT)
+        print(f"Tunnel  : {public_url}")
+        print(f"Webhook : {update_webhook(public_url)} -> {public_url}/jira-webhook")
+    except Exception as e:
+        print(f"[CANH BAO] Khong dung duoc tunnel/webhook: {e}")
+        print("           Server local van chay, nhung Jira se khong gui event toi duoc.")
+
+    print("Webhook endpoint: POST /jira-webhook  |  Ctrl+C de dung")
+    try:
+        threading.Event().wait()
+    except KeyboardInterrupt:
+        print("\nDang dung...")
+        stop_tunnel()

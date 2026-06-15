@@ -1,8 +1,11 @@
 # Jira Cloud REST API client toi gian - Python thuan, khong can thu vien ngoai.
-# Cau hinh qua bien moi truong:
-#   JIRA_SITE      vd: https://your-site.atlassian.net
-#   JIRA_EMAIL     email tai khoan Atlassian
-#   JIRA_API_TOKEN token tao tai id.atlassian.com (hoac de trong file API_token.txt canh repo)
+# Cau hinh GOM HET vao file .env canh repo (copy tu .env.example). Cac key:
+#   JIRA_SITE         vd: https://your-site.atlassian.net
+#   JIRA_EMAIL        email tai khoan Atlassian
+#   JIRA_API_TOKEN    token tao tai id.atlassian.com
+#   JIRA_PROJECT      (tuy chon) project key de loc webhook - mac dinh SCRUM
+#   JIRA_WEBHOOK_NAME (tuy chon) ten webhook rieng cua dev
+# Bien moi truong that (da set san o shell) se duoc uu tien hon gia tri trong .env.
 import json
 import os
 import time
@@ -10,24 +13,31 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+
+def _load_dotenv():
+    """Nap file .env (dang KEY=VALUE) vao os.environ. Bien moi truong that (neu da set) duoc uu tien."""
+    for p in (Path(__file__).parent / ".env", Path(__file__).parent.parent / ".env"):
+        if not p.exists():
+            continue
+        for line in p.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, val = line.partition("=")
+            os.environ.setdefault(key.strip(), val.strip().strip('"').strip("'"))
+        break
+
+
+_load_dotenv()  # nap .env truoc khi doc cau hinh -> moi cau hinh gom ve mot file .env
+
 SITE = os.environ.get("JIRA_SITE", "https://your-site.atlassian.net").rstrip("/")
 EMAIL = os.environ.get("JIRA_EMAIL", "your-email@example.com")
-
-# Ghi de cuc bo (khong commit): tao file local_config.py canh repo voi SITE/EMAIL cua ban
-try:
-    from local_config import *  # noqa: F401,F403
-except ImportError:
-    pass
 
 
 def _load_token():
     if os.environ.get("JIRA_API_TOKEN"):
         return os.environ["JIRA_API_TOKEN"]
-    for p in (Path(__file__).parent / "API_token.txt",
-              Path(__file__).parent.parent / "API_token.txt"):
-        if p.exists():
-            return p.read_text(encoding="utf-8").strip()
-    raise RuntimeError("Thieu token: set JIRA_API_TOKEN hoac tao file API_token.txt (da gitignore)")
+    raise RuntimeError("Thieu JIRA_API_TOKEN: them vao file .env canh repo (xem .env.example)")
 
 
 import base64

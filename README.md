@@ -41,27 +41,41 @@ API ghi (POST/PUT) có body mẫu sẵn.
 
 ## Chạy trong 5 phút
 
-```powershell
-# 1. Cau hinh (hoac tao file API_token.txt canh repo - da gitignore)
-$env:JIRA_SITE = "https://<site>.atlassian.net"
-$env:JIRA_EMAIL = "<email>"
-$env:JIRA_API_TOKEN = "<token tu id.atlassian.com>"
+Mỗi dev tự lấy source về và cấu hình **của riêng mình** trong **một file `.env`**
+(copy từ `.env.example`, đã gitignore — không commit):
 
-# 2. Chay web (Python 3.9+, khong can pip install gi)
+```powershell
+# 1. Tao file cau hinh cua ban
+copy .env.example .env
+#    roi mo .env dien: JIRA_SITE, JIRA_EMAIL, JIRA_API_TOKEN (token tao tai id.atlassian.com)
+
+# 2. Chay (Python 3.9+, khong can pip install gi)
 python web_demo.py          # -> http://localhost:8765
 ```
 
-Đến đây tab **Danh mục API** và **Xem AI context** đã dùng được. Muốn nhận webhook realtime:
+> Toàn bộ cấu hình gom trong `.env`. Code tự nạp file này lúc khởi động (không cần `pip install`).
+> Nếu bạn đã set sẵn biến môi trường thật ở shell thì biến đó được ưu tiên hơn giá trị trong `.env`.
 
-```powershell
-# 3. Mo tunnel (hoac ngrok)
-cloudflared tunnel --url http://localhost:8765
-# 4. Dang ky webhook voi URL tunnel vua duoc cap (can quyen admin Jira)
-python register_webhook.py https://<random>.trycloudflare.com SCRUM
-```
+Chỉ một lệnh `python web_demo.py` lo **toàn bộ**: mở web server → tự chạy `cloudflared`
+tunnel → lấy URL công khai mới → **tự đăng ký/cập nhật webhook riêng của bạn** trên Jira.
+Không cần chạy tunnel hay đăng ký webhook bằng tay. Sửa một ticket trong Jira → event hiện
+ra trên web trong ~1 giây. `Ctrl+C` để dừng (tự tắt luôn tunnel).
 
-Sửa một ticket trong Jira → event hiện ra trên web trong ~1 giây.
-URL tunnel đổi mỗi lần khởi động lại → chạy lại bước 4 (gỡ webhook cũ bằng DELETE vào URL `self` mà script in ra).
+> **Cần:** `cloudflared` đã cài (tự tìm trong PATH và `C:\Program Files (x86)\cloudflared`),
+> và token có **quyền admin** trên site (đăng ký webhook đòi quyền admin).
+
+**Webhook riêng theo từng dev** — tên webhook tự đặt theo email bạn cấu hình
+(vd. `AI ticket demo - haitruong7592`), nên **nhiều dev dùng chung một site không giẫm lên nhau**:
+mỗi người có webhook riêng, Jira gửi event tới tất cả → ai cũng nhận. Chạy lại nhiều lần chỉ
+cập nhật đúng webhook đó (không tạo trùng). Cấu hình thêm qua env (đều có mặc định):
+
+| Biến | Mặc định | Ý nghĩa |
+|---|---|---|
+| `JIRA_PROJECT` | `SCRUM` | Project key để lọc sự kiện webhook |
+| `JIRA_WEBHOOK_NAME` | `AI ticket demo - <phần trước @ của email>` | Đặt tay nếu nhiều dev chung một máy/email |
+
+> `register_webhook.py` (đăng ký tay) vẫn còn cho ai muốn tự kiểm soát, nhưng quy trình tự động
+> ở trên đã thay thế nó trong luồng chạy thường ngày.
 
 ## File
 
