@@ -396,7 +396,7 @@
                 "issuetypes"
               ]
             },
-            "description": "== JIRA DOC ==\nFolder: Issues\nOperation: Get create metadata issue types for a project\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issues/#api-rest-api-3-issue-createmeta-projectidorkey-issuetypes-get\n\n== GIUP GI CHO AI ==\nChỉ cần nếu cho AI tạo ticket mới (vd tách bug, tạo subtask): biết project nhận những issue type nào, field nào bắt buộc khi tạo.\n\nCACH DUNG: Lấy issueTypeId ở đây rồi GET /issue/createmeta/{project}/issuetypes/{issueTypeId} để biết chi tiết field bắt buộc của từng loại."
+            "description": "== JIRA DOC ==\nFolder: Issues\nOperation: Get create metadata issue types for a project\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issues/#api-rest-api-3-issue-createmeta-projectidorkey-issuetypes-get\n\n== GIUP GI CHO AI ==\nChỉ cần nếu cho AI tạo ticket mới (vd tách bug, tạo subtask): liệt kê các issue type mà project cho phép tạo.\n\nCACH DUNG: Đây là bước 1 (lấy issueTypeId). Bước 2: GET /issue/createmeta/{project}/issuetypes/{issueTypeId} để biết field nào bắt buộc của từng loại."
           }
         },
         {
@@ -932,9 +932,14 @@
             },
             "description": "== JIRA DOC ==\nFolder: Issue fields\nOperation: Get fields\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-fields/#api-rest-api-3-field-get\n\n== GIUP GI CHO AI ==\nBảng tra customfield_xxxxx → tên + kiểu dữ liệu. Cache 1 lần dùng mãi.\n\nCACH DUNG: Với custom field dạng select: GET /field/{fieldId}/contexts rồi GET /field/{fieldId}/context/{contextId}/option để lấy danh sách giá trị hợp lệ."
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Issue custom field contexts",
+      "item": [
         {
-          "name": "Get contexts for a field",
+          "name": "Get custom field contexts",
           "request": {
             "method": "GET",
             "header": [
@@ -944,7 +949,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/rest/api/3/field/{{fieldId}}/contexts",
+              "raw": "{{baseUrl}}/rest/api/3/field/{{fieldId}}/context",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -954,10 +959,10 @@
                 "3",
                 "field",
                 "{{fieldId}}",
-                "contexts"
+                "context"
               ]
             },
-            "description": "== JIRA DOC ==\nFolder: Issue fields\nOperation: Get contexts for a field\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-fields/#api-rest-api-3-field-fieldid-contexts-get\n\n== GIUP GI CHO AI ==\nBước trung gian để lấy danh sách giá trị hợp lệ của custom field dạng select/multi-select — cần khi AI muốn set custom field.\n\nCACH DUNG: Lấy contextId ở đây rồi GET /field/{fieldId}/context/{contextId}/option. fieldId vd customfield_10020."
+            "description": "== JIRA DOC ==\nFolder: Issue custom field contexts\nOperation: Get custom field contexts\nTai lieu: https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-custom-field-contexts/#api-rest-api-3-field-fieldid-context-get\n\n== GIUP GI CHO AI ==\nBước trung gian để lấy danh sách giá trị hợp lệ của custom field dạng select/multi-select — cần khi AI muốn set custom field.\n\nCACH DUNG: Lấy contextId ở đây rồi GET /field/{fieldId}/context/{contextId}/option. (Đừng dùng /contexts số nhiều — Atlassian đã deprecated.) fieldId vd customfield_10020."
           }
         }
       ]

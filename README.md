@@ -67,10 +67,13 @@ URL tunnel đổi mỗi lần khởi động lại → chạy lại bước 4 (g
 
 | File | Vai trò |
 |---|---|
+| `API_GUIDE.md` | **Giải thích chi tiết vai trò từng API (52 cái) khi dùng cho AI** — đọc để hiểu mỗi API đóng góp gì vào việc hiểu/phán đoán ticket, kèm ví dụ chuỗi gọi thật |
 | `web_demo.py` | Server: nhận webhook, API catalog, proxy gọi thử (chỉ GET), build context + trace |
-| `index.html` | Giao diện 2 tab |
+| `index.html` | Giao diện 3 tab |
+| `catalog_data.py` | Nguồn dữ liệu 52 API + 29 lưu ý (web, Postman, API_GUIDE đều sinh từ đây) |
 | `ai_context.py` | **Contract với AI team** — ghép chuỗi API thành JSON context; chạy độc lập được |
 | `jira_client.py` | Client REST tối giản (`call`, `adf_to_text`, hook trace) |
+| `generate_postman.py` / `generate_api_guide.py` | Sinh Postman collection / API_GUIDE.md từ `catalog_data.py` |
 | `register_webhook.py` | Đăng ký webhook qua API |
 
 ## 5 điều quan trọng nhất về Jira API (rút từ điều tra + test thật)
