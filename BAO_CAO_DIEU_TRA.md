@@ -19,6 +19,7 @@
 
 | Nhóm | API | Vai trò |
 |---|---|---|
+| **Kích hoạt (trigger)** | Webhook `jira:issue_created` / `issue_updated` (đăng ký qua `POST /rest/webhooks/1.0/webhook`, kèm JQL filter) | Jira tự gọi sang khi có ticket mới/đổi — điểm bắt đầu của flow. **Lưu ý:** chỉ lấy `issue.key` từ payload rồi gọi `GET issue` để có dữ liệu đầy đủ (payload event comment bị rút gọn; thứ tự event không đảm bảo). |
 | **Đọc & hiểu ticket** | `GET /rest/api/3/issue/{key}` (`expand=renderedFields,names,changelog`) | Lấy gần như toàn bộ: summary, description, status, priority, custom field, links, subtasks, changelog. |
 | | `GET /rest/api/3/issue/{key}/comment` | Đọc thảo luận — nơi thường chứa nguyên nhân & cách fix. |
 | | `GET /rest/api/3/issue/{key}/changelog` | Lịch sử thay đổi (ai xử lý, qua những bước nào). |
@@ -65,7 +66,19 @@ Với quy mô **hàng trăm nghìn ticket**, đề xuất **Hướng 2 — Seman
 - `text ~` của Jira không đủ (chỉ keyword) → cần semantic search ở store ngoài.
 - **Giai đoạn đầu chỉ comment đề xuất, người vẫn quyết định** — chưa tự động assign/đóng ticket. Hướng 3 là bước tiến hóa tiếp theo khi đã tin tưởng.
 
-## ⚠️ 4.1 Quan trọng: JSM đã có sẵn phần lớn — đánh giá native TRƯỚC khi tự xây
+**Lộ trình hành động (đúng yêu cầu "tự phán đoán hết"):** comment đề xuất *(an toàn nhất, làm trước)* → gán người / kéo SME vào (`assignee` + `watcher` + @mention) → escalate / đổi priority → cuối cùng mới **tự đóng ticket** (`transition` sang Done) khi độ tin cậy đủ cao. Mỗi mức là một bước "nới quyền" có kiểm soát.
+
+## 4.1 Kết hợp API ở quy mô hàng trăm nghìn ticket
+
+Điểm mấu chốt về quy mô: **KHÔNG quét toàn bộ ticket qua Jira API mỗi lần có ticket mới** (sẽ đụng rate limit và cực chậm). Mẫu kết hợp đúng:
+
+1. **Backfill 1 lần (offline):** xuất toàn bộ ticket lịch sử qua `POST /search/jql` (phân trang bằng `nextPageToken`) + `POST /issue/bulkfetch` (100 ticket/lần), **có throttle** để không giành rate-budget với người dùng thật → đẩy vào một **index ngoài Jira** (semantic/vector).
+2. **Realtime (online):** webhook báo ticket mới → chỉ `GET issue` đúng 1 ticket đó → tìm tương tự **trong index ngoài** (không gọi Jira) → AI đề xuất → ghi 1 comment.
+3. **Đồng bộ tăng dần:** webhook cập nhật index khi ticket đổi; thêm 1 lần quét `updated >= -1d` mỗi đêm để bù event lỡ.
+
+→ Jira chỉ chịu tải: 1 lần backfill + mỗi ticket mới ~1–2 call. Việc "tìm trong hàng trăm nghìn ticket" do index ngoài lo, không phải Jira API.
+
+## ⚠️ 4.2 Quan trọng: JSM đã có sẵn phần lớn — đánh giá native TRƯỚC khi tự xây
 
 Trong quá trình điều tra phát hiện: **Atlassian JSM đã có sẵn tính năng làm gần đúng use case này** (gợi cách xử lý ticket mới dựa trên ticket cũ), ngay trong mô hình quyền và bảo mật của Jira. Đáng chú ý Atlassian tách đúng hai thứ ta đã phân biệt:
 
